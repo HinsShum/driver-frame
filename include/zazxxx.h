@@ -37,7 +37,7 @@ extern "C"
 /*---------- macro ----------*/
 #define IOCTL_ZAZXXX_GET_COMPORT                            (IOCTL_SERIAL_GET_COMPORT)
 #define IOCTL_ZAZXXX_SET_IRQ_HANDLER                        (IOCTL_SERIAL_SET_IRQ_HANDLER)
-#define IOCTL_ZAZXXX_DIRECTION_CHOOSE                       (IOCTL_SERIAL_DIRECTION_CHOOSE)
+#define IOCTL_ZAZXXX_DIRECTION_CHOOSE                       (IOCTL_SERIAL_SET_DIRECTION)
 #define IOCTL_ZAZXXX_GET_BAUDRATE                           (IOCTL_SERIAL_GET_BAUDRATE)
 #define IOCTL_ZAZXXX_SET_BAUDRATE                           (IOCTL_SERIAL_SET_BAUDRATE)
 #define IOCTL_ZAZXXX_CONNECT                                (IOCTL_SERIAL_SET_BAUDRATE + 0x01)

@@ -40,6 +40,8 @@
 #define FM25QXX_READ_STATUS_WIP                 (1 << 0)
 #define FM25QXX_READ_STATUS_WEL                 (1 << 1)
 
+#define FM25QXX_PAGE_SIZE                       (0x100)
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t fm25qxx_open(driver_t **pdrv);
@@ -55,65 +57,37 @@ static flash_info_t fm25qxx_serials[] = {
     [0] = {
         .start = 0,
         .end = 0x40000,
-        .page_size = 0x100,
-        .pages = 0x400,
-        .sector_size = 0x1000,
-        .sectors = 0x40,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     },
     [1] = {
         .start = 0,
         .end = 0x80000,
-        .page_size = 0x100,
-        .pages = 0x800,
-        .sector_size = 0x1000,
-        .sectors = 0x80,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     },
     [2] = {
         .start = 0,
         .end = 0x100000,
-        .page_size = 0x100,
-        .pages = 0x1000,
-        .sector_size = 0x1000,
-        .sectors = 0x100,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     },
     [3] = {
         .start = 0,
         .end = 0x200000,
-        .page_size = 0x100,
-        .pages = 0x2000,
-        .sector_size = 0x1000,
-        .sectors = 0x200,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     },
     [4] = {
         .start = 0,
         .end = 0x400000,
-        .page_size = 0x100,
-        .pages = 0x4000,
-        .sector_size = 0x1000,
-        .sectors = 0x400,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     },
     [5] = {
         .start = 0,
         .end = 0x800000,
-        .page_size = 0x100,
-        .pages = 0x8000,
-        .sector_size = 0x1000,
-        .sectors = 0x800,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     },
     [6] = {
         .start = 0,
         .end = 0x1000000,
-        .page_size = 0x100,
-        .pages = 0x10000,
-        .sector_size = 0x1000,
-        .sectors = 0x1000,
-        .minimum_erase_size = 0x1000
+        .block_size = 0x1000
     }
 };
 
@@ -228,10 +202,10 @@ static int32_t fm25qxx_write_page(fm25qxx_describe_t *pdesc, uint32_t addr, uint
     uint32_t length = 0;
 
     do {
-        if((addr + len) > pdesc->flash.info.end) {
+        if((addr + len) > pdesc->flash.end) {
             break;
         }
-        page_left = pdesc->flash.info.page_size - (addr % pdesc->flash.info.page_size);
+        page_left = FM25QXX_PAGE_SIZE - (addr % FM25QXX_PAGE_SIZE);
         if(page_left < len) {
             len = page_left;
         }
@@ -264,11 +238,12 @@ static int32_t fm25qxx_open(driver_t **pdrv)
 {
     fm25qxx_describe_t *pdesc = NULL;
     int32_t retval = CY_EOK;
+    flash_info_t *pinfo = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->flash.init) {
-        retval = (pdesc->flash.init() ? CY_EOK : CY_ERROR);
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
+    if(pdesc && pdesc->flash.ops.init) {
+        retval = (pdesc->flash.ops.init() ? CY_EOK : CY_ERROR);
         if(CY_EOK == retval) {
             fm25qxx_getid(pdesc);
             do {
@@ -281,10 +256,13 @@ static int32_t fm25qxx_open(driver_t **pdrv)
                     retval = CY_ERROR;
                     break;
                 }
-                pdesc->flash.info = fm25qxx_serials[device_id - FM25QXX_DEVICE_ID_02];
+                pinfo = &fm25qxx_serials[device_id - FM25QXX_DEVICE_ID_02];
+                pdesc->flash.start = pinfo->start;
+                pdesc->flash.end = pinfo->end;
+                pdesc->flash.block_size = pinfo->block_size;
             } while(0);
             if(CY_EOK != retval) {
-                pdesc->flash.deinit();
+                pdesc->flash.ops.deinit();
             }
         }
     }
@@ -297,9 +275,9 @@ static void fm25qxx_close(driver_t **pdrv)
     fm25qxx_describe_t *pdesc = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->flash.deinit) {
-        pdesc->flash.deinit();
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
+    if(pdesc && pdesc->flash.ops.deinit) {
+        pdesc->flash.ops.deinit();
     }
 }
 
@@ -311,12 +289,12 @@ static int32_t fm25qxx_write(driver_t **pdrv, void *buf, uint32_t addr, uint32_t
 
     assert(pdrv);
     assert(buf);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
             break;
         }
-        if((addr + len) > pdesc->flash.info.end) {
+        if((addr + len) > pdesc->flash.end) {
             break;
         }
         do {
@@ -339,16 +317,16 @@ static int32_t fm25qxx_read(driver_t **pdrv, void *buf, uint32_t addr, uint32_t 
 
     assert(pdrv);
     assert(buf);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
             break;
         }
-        if(addr > pdesc->flash.info.end) {
+        if(addr > pdesc->flash.end) {
             break;
         }
-        if((addr + len) > pdesc->flash.info.end) {
-            length = pdesc->flash.info.end - addr;
+        if((addr + len) > pdesc->flash.end) {
+            length = pdesc->flash.end - addr;
         } else {
             length = len;
         }
@@ -370,15 +348,12 @@ static int32_t fm25qxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
 {
     fm25qxx_describe_t *pdesc = NULL;
     int32_t retval = CY_ERROR;
+    flash_info_t *pinfo = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     switch(cmd) {
-        case IOCTL_FLASH_ERASE_PAGE:
-            retval = CY_E_WRONG_ARGS;
-            break;
-        case IOCTL_FLASH_ERASE_MINIMUM_SIZE:
-        case IOCTL_FLASH_ERASE_SECTOR:
+        case IOCTL_FLASH_ERASE_BLOCK:
             if(pdesc) {
                 retval = fm25qxx_erase_sector(pdesc, *(uint32_t *)args);
             }
@@ -390,7 +365,10 @@ static int32_t fm25qxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
             break;
         case IOCTL_FLASH_GET_INFO:
             if(pdesc) {
-                *(flash_info_t *)args = pdesc->flash.info;
+                pinfo = (flash_info_t *)args;
+                pinfo->start = pdesc->flash.start;
+                pinfo->end = pdesc->flash.end;
+                pinfo->block_size = pdesc->flash.block_size;
                 retval = CY_EOK;
             }
             break;
@@ -398,6 +376,24 @@ static int32_t fm25qxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
             if(pdesc) {
                 *(uint16_t *)args = pdesc->idcode;
                 retval = CY_EOK;
+            }
+            break;
+        case IOCTL_FLASH_SET_CALLBACK:
+            if(pdesc) {
+                pdesc->flash.ops.cb = (void (*)(void))args;
+                retval = CY_EOK;
+            }
+            break;
+        case IOCTL_FLASH_CHECK_ADDR_IS_BLOCK_START:
+            if(pdesc && args) {
+                uint32_t *paddr = (uint32_t *)args;
+                if(pdesc->flash.ops.addr_is_block_start) {
+                    if(!pdesc->flash.ops.addr_is_block_start(*paddr)) {
+                        retval = CY_ERROR;
+                    } else {
+                        retval = CY_EOK;
+                    }
+                }
             }
             break;
         default:

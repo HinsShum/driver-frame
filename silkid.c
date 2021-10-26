@@ -172,9 +172,9 @@ static int32_t silkid_open(driver_t **pdrv)
     int32_t retval = CY_EOK;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->serial.init) {
-        retval = (pdesc->serial.init() ? CY_EOK : CY_ERROR);
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
+    if(pdesc && pdesc->serial.ops.init) {
+        retval = (pdesc->serial.ops.init() ? CY_EOK : CY_ERROR);
     }
 
     return retval;
@@ -185,22 +185,22 @@ static void silkid_close(driver_t **pdrv)
     silkid_describe_t *pdesc = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->serial.deinit) {
-        pdesc->serial.deinit();
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
+    if(pdesc && pdesc->serial.ops.deinit) {
+        pdesc->serial.ops.deinit();
     }
 }
 
 static int32_t __silkid_write(silkid_describe_t *pdesc)
 {
     pdesc->normal.iswrite = true;
-    if(pdesc->serial.dir_change) {
-        pdesc->serial.dir_change(SERIAL_DIRECTION_TX);
+    if(pdesc->serial.ops.dir_change) {
+        pdesc->serial.ops.dir_change(SERIAL_DIRECTION_TX);
     }
-    pdesc->serial.write(pdesc->normal.buf, pdesc->normal.offset);
+    pdesc->serial.ops.write(pdesc->normal.buf, pdesc->normal.offset);
     __silkid_reset_normal_buffer(pdesc);
-    if(pdesc->serial.dir_change) {
-        pdesc->serial.dir_change(SERIAL_DIRECTION_RX);
+    if(pdesc->serial.ops.dir_change) {
+        pdesc->serial.ops.dir_change(SERIAL_DIRECTION_RX);
     }
 
     return CY_EOK;
@@ -213,15 +213,15 @@ static int32_t __silkid_write_with_data(silkid_describe_t *pdesc, uint8_t *pbuf,
 
     sum = __silkid_checksum(pbuf, len);
     pdesc->normal.iswrite = true;
-    if(pdesc->serial.dir_change) {
-        pdesc->serial.dir_change(SERIAL_DIRECTION_TX);
+    if(pdesc->serial.ops.dir_change) {
+        pdesc->serial.ops.dir_change(SERIAL_DIRECTION_TX);
     }
-    pdesc->serial.write(pdesc->normal.buf, pdesc->normal.offset);
+    pdesc->serial.ops.write(pdesc->normal.buf, pdesc->normal.offset);
     __silkid_reset_normal_buffer(pdesc);
-    pdesc->serial.write(pbuf, len);
-    pdesc->serial.write((uint8_t *)&sum, sizeof(sum));
-    if(pdesc->serial.dir_change) {
-        pdesc->serial.dir_change(SERIAL_DIRECTION_RX);
+    pdesc->serial.ops.write(pbuf, len);
+    pdesc->serial.ops.write((uint8_t *)&sum, sizeof(sum));
+    if(pdesc->serial.ops.dir_change) {
+        pdesc->serial.ops.dir_change(SERIAL_DIRECTION_RX);
     }
 
     return CY_EOK;
@@ -422,7 +422,7 @@ static int32_t silkid_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     int32_t retval = CY_EOK;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     switch(cmd) {
         case IOCTL_SILKID_GET_COMPORT:
             if(pdesc) {
@@ -431,16 +431,16 @@ static int32_t silkid_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
             break;
         case IOCTL_SILKID_SET_IRQ_HANDLER:
             if(pdesc) {
-                pdesc->serial.irq_handler = (int32_t (*)(uint32_t, void *, uint32_t))args;
+                pdesc->serial.ops.irq_handler = (int32_t (*)(uint32_t, void *, uint32_t))args;
             }
             break;
         case IOCTL_SILKID_DIRECTION_CHOOSE:
-            if(pdesc && pdesc->serial.dir_change && args) {
+            if(pdesc && pdesc->serial.ops.dir_change && args) {
                 serial_direction_en dir = *(serial_direction_en *)args;
                 if(dir > SERIAL_DIRECTION_NRX_NTX) {
                     retval = CY_E_WRONG_ARGS;
                 } else {
-                    pdesc->serial.dir_change(dir);
+                    pdesc->serial.ops.dir_change(dir);
                 }
             }
             break;
@@ -454,11 +454,11 @@ static int32_t silkid_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
                 uint32_t baud = *(uint32_t *)args;
                 if(pdesc->serial.baudrate != baud) {
                     pdesc->serial.baudrate = baud;
-                    if(pdesc->serial.deinit) {
-                        pdesc->serial.deinit();
+                    if(pdesc->serial.ops.deinit) {
+                        pdesc->serial.ops.deinit();
                     }
-                    if(pdesc->serial.init) {
-                        retval = (pdesc->serial.init() ? CY_EOK : CY_ERROR);
+                    if(pdesc->serial.ops.init) {
+                        retval = (pdesc->serial.ops.init() ? CY_EOK : CY_ERROR);
                     }
                 }
             }
@@ -562,7 +562,7 @@ static int32_t silkid_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *a
 
     assert(pdrv);
     assert(args || !len);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     pack = (silkid_response_packet_t *)pdesc->normal.buf;
     while(len-- > 0) {
         silkid_irq_recv_pack(pdesc, *pdata++);
@@ -577,8 +577,8 @@ static int32_t silkid_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *a
             } else {
                 break;
             }
-            if(pdesc->serial.irq_handler) {
-                retval = pdesc->serial.irq_handler(irq_handler, &irq_args, sizeof(irq_args));
+            if(pdesc->serial.ops.irq_handler) {
+                retval = pdesc->serial.ops.irq_handler(irq_handler, &irq_args, sizeof(irq_args));
             }
             __silkid_reset_normal_buffer(pdesc);
         }

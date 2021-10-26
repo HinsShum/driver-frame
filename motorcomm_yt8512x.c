@@ -26,7 +26,6 @@
 #include "driver.h"
 #include "config/errorno.h"
 #include "config/options.h"
-#include "printk.h"
 #include <string.h>
 
 /*---------- macro ----------*/
@@ -245,38 +244,38 @@ static int32_t yt8512x_open(driver_t **pdrv)
     int32_t retval = CY_EOK;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     if(pdesc && pdesc->init) {
         retval = pdesc->init();
         if(CY_EOK == retval) {
             do {
                 retval = yt8512_clock_init(pdesc);
                 if(retval < CY_EOK) {
-                    printk(KERN_ERROR "YT8512 initialize clock register failed\n");
+                    __debug_error("YT8512 initialize clock register failed\n");
                     break;
                 }
                 retval = yt8512_led_init(pdesc);
                 if(retval < CY_EOK) {
-                    printk(KERN_ERROR "YT8512 initialize led register failed\n");
+                    __debug_error("YT8512 initialize led register failed\n");
                     break;
                 }
                 /* disable auto sleep */
                 retval = yt8512_read_extreg(pdesc, PHY_EXTREG_SLEEP_CONTROL1);
                 if(retval < CY_EOK) {
-                    printk(KERN_ERROR "YT8512 read %04X register failed\n", PHY_EXTREG_SLEEP_CONTROL1);
+                    __debug_error("YT8512 read %04X register failed\n", PHY_EXTREG_SLEEP_CONTROL1);
                     break;
                 }
                 retval &= ~PHY_EXTREG_EN_SLEEP_SW;
                 retval = yt8512_write_extrge(pdesc, PHY_EXTREG_SLEEP_CONTROL1, (uint16_t)retval);
             } while(0);
             if(retval != CY_EOK) {
-                printk(KERN_MESSAGE "YT8512 deinit hardware\n");
+                __debug_message("YT8512 deinit hardware\n");
                 pdesc->deinit();
             }
         } else if(CY_E_TIME_OUT == retval) {
-            printk(KERN_ERROR "Reset Ethernet Controller tiemout\n");
+            __debug_error("Reset Ethernet Controller tiemout\n");
         } else {
-            printk(KERN_ERROR "YT8512 can not be reset, maybe SIM interface has some errors take place\n");
+            __debug_error("YT8512 can not be reset, maybe SIM interface has some errors take place\n");
         }
     }
 
@@ -288,7 +287,7 @@ static void yt8512_close(driver_t **pdrv)
     motorcomm_yt8512x_describe_t *pdesc = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     if(pdesc && pdesc->deinit) {
         pdesc->deinit();
     }
@@ -328,7 +327,7 @@ static int32_t yt8512_autoneg(motorcomm_yt8512x_describe_t *pdesc, uint32_t time
             retval = CY_E_TIME_OUT;
         } else {
             if(CY_EOK > (retval = pdesc->phy_read(PHY_REG_SPEC_STATUS))) {
-                printk(KERN_ERROR "YT8512 read specific status register failed\n");
+                __debug_error("YT8512 read specific status register failed\n");
                 break;
             }
             if(retval & PHY_REG_SR_SPEED_100M) {
@@ -377,7 +376,7 @@ static int32_t yt8512_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     int32_t retval = CY_E_POINT_NONE;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     switch(cmd) {
         case IOCTL_YT8512X_SET_IRQ_HANDLER:
             if(pdesc) {
@@ -431,7 +430,7 @@ static int32_t yt8512_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *a
     int32_t retval = CY_EOK;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     if(pdesc && pdesc->irq_handler) {
         retval = pdesc->irq_handler(irq_handler, args, len);
     }

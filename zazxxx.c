@@ -304,12 +304,12 @@ static int32_t _command_data_template_packet_make(zazxxx_describe_t *pdesc, uint
 
 static void _command_packet_send(zazxxx_describe_t *pdesc)
 {
-    if(pdesc->serial.dir_change) {
-        pdesc->serial.dir_change(SERIAL_DIRECTION_TX);
+    if(pdesc->serial.ops.dir_change) {
+        pdesc->serial.ops.dir_change(SERIAL_DIRECTION_TX);
     }
-    pdesc->serial.write(pdesc->_private.buffer, pdesc->_private.offset);
-    if(pdesc->serial.dir_change) {
-        pdesc->serial.dir_change(SERIAL_DIRECTION_RX);
+    pdesc->serial.ops.write(pdesc->_private.buffer, pdesc->_private.offset);
+    if(pdesc->serial.ops.dir_change) {
+        pdesc->serial.ops.dir_change(SERIAL_DIRECTION_RX);
     }
     _command_packet_clear(pdesc);
 }
@@ -391,9 +391,9 @@ static int32_t zazxxx_open(driver_t **pdrv)
     int32_t retval = CY_EOK;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->serial.init) {
-        retval = (pdesc->serial.init() ? CY_EOK : CY_ERROR);
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
+    if(pdesc && pdesc->serial.ops.init) {
+        retval = (pdesc->serial.ops.init() ? CY_EOK : CY_ERROR);
     }
 
     return retval;
@@ -404,9 +404,9 @@ static void zazxxx_close(driver_t **pdrv)
     zazxxx_describe_t *pdesc = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->serial.deinit) {
-        pdesc->serial.deinit();
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
+    if(pdesc && pdesc->serial.ops.deinit) {
+        pdesc->serial.ops.deinit();
     }
 }
 
@@ -450,7 +450,7 @@ static int32_t _ioctl_set_irq_handler(zazxxx_describe_t *pdesc, void *args)
             __debug_warn("Args is NULL, can not set zazxxx driver's irq handler\n");
             break;
         }
-        pdesc->serial.irq_handler = (int32_t (*)(uint32_t, void *, uint32_t))args;
+        pdesc->serial.ops.irq_handler = (int32_t (*)(uint32_t, void *, uint32_t))args;
         retval = CY_EOK;
     } while(0);
 
@@ -467,7 +467,7 @@ static int32_t _ioctl_direction_choose(zazxxx_describe_t *pdesc, void *args)
             __debug_warn("Args is NULL, can not choose direction in zazxxx driver\n");
             break;
         }
-        if(!pdesc->serial.dir_change) {
+        if(!pdesc->serial.ops.irq_handler) {
             __debug_warn("zazxxx driver not support choose direction\n");
             break;
         }
@@ -475,7 +475,7 @@ static int32_t _ioctl_direction_choose(zazxxx_describe_t *pdesc, void *args)
             __debug_warn("Args(%02X) for choose direction is error\n", *pdir);
             break;
         }
-        pdesc->serial.dir_change(*pdir);
+        pdesc->serial.ops.dir_change(*pdir);
         retval = CY_EOK;
     } while(0);
 
@@ -515,11 +515,11 @@ static int32_t _ioctl_set_baudrate(zazxxx_describe_t *pdesc, void *args)
             break;
         }
         pdesc->serial.baudrate = *pbaudrate;
-        if(pdesc->serial.deinit) {
-            pdesc->serial.deinit();
+        if(pdesc->serial.ops.deinit) {
+            pdesc->serial.ops.deinit();
         }
-        if(pdesc->serial.init) {
-            retval = (pdesc->serial.init() ? CY_EOK : CY_ERROR);
+        if(pdesc->serial.ops.init) {
+            retval = (pdesc->serial.ops.init() ? CY_EOK : CY_ERROR);
         }
     } while(0);
 
@@ -827,7 +827,7 @@ static int32_t zazxxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     ioctl_cb_func_t cb = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
             __debug_warn("No device bind to zazxxx driver module\n");
@@ -924,7 +924,7 @@ static int32_t zazxxx_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *a
 
     assert(pdrv);
     assert(args || !len);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(pdesc->_private.state == RECV_STATE_BUSY) {
             break;
@@ -941,8 +941,8 @@ static int32_t zazxxx_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *a
                 break;
             }
         }
-        if(pdesc->_private.state == RECV_STATE_BUSY && pdesc->serial.irq_handler) {
-            retval = pdesc->serial.irq_handler(irq_handler, NULL, 0);
+        if(pdesc->_private.state == RECV_STATE_BUSY && pdesc->serial.ops.irq_handler) {
+            retval = pdesc->serial.ops.irq_handler(irq_handler, NULL, 0);
         }
     } while(0);
 

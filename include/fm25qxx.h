@@ -35,7 +35,7 @@ extern "C"
 #include "flash.h"
 
 /*---------- macro ----------*/
-#define IOCTL_FM25QXX_GET_IDCODE                    (IOCTL_FLASH_USER_START + 0x00)
+#define IOCTL_FM25QXX_GET_IDCODE                    (IOCTL_FLASH_INHERIT_START + 0x00)
 
 /*---------- type define ----------*/
 typedef struct {

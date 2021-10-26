@@ -66,7 +66,7 @@ typedef struct {
     char drv_name[10];
     uint16_t attribute;
     uint32_t count;
-    void *pdrv;
+    struct st_driver *pdrv;
     void *pdesc;
 } device_t;
 

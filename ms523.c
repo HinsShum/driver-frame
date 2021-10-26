@@ -26,7 +26,6 @@
 #include "driver.h"
 #include "config/errorno.h"
 #include "config/options.h"
-#include "printk.h"
 #include "checksum.h"
 #include <string.h>
 
@@ -393,18 +392,18 @@ static int32_t ms523_open(driver_t **pdrv)
     int32_t retval = CY_EOK;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     if(pdesc && pdesc->init) {
         if(pdesc->init()) {
             ms523_reset(pdesc);
-            printk(KERN_INFO "MS523 version: %02X\n", ms523_read_reg(pdesc, REG_VERSION));
+            __debug_info("MS523 version: %02X\n", ms523_read_reg(pdesc, REG_VERSION));
             ms523_pcd_config_iso_type(pdesc, MS523_CARD_TYPE_ISO14443_A);
             ms523_pcd_antenna_ctrl(pdesc, false);
             __delay_ms(100);
             ms523_pcd_antenna_ctrl(pdesc, true);
         } else {
             retval = CY_ERROR;
-            printk(KERN_ERROR "MS523 bsp initialize failed\n");
+            __debug_error("MS523 bsp initialize failed\n");
         }
     }
 
@@ -416,7 +415,7 @@ static void ms523_close(driver_t **pdrv)
     ms523_describe_t *pdesc = NULL;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     if(pdesc && pdesc->deinit) {
         pdesc->deinit();
     }
@@ -639,7 +638,7 @@ static int32_t ms523_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     int32_t retval = CY_E_WRONG_ARGS;
 
     assert(pdrv);
-    pdesc = container_of((void **)pdrv, device_t, pdrv)->pdesc;
+    pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     switch(cmd) {
         case IOCTL_MS523_PCD_HALT:
             if(pdesc) {
