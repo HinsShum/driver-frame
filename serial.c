@@ -244,7 +244,7 @@ static int32_t serial_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("Serial dirver not support this command(%08X)\n", cmd);
+            __debug_error("Serial driver not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);
