@@ -40,6 +40,8 @@ extern "C"
 #define IOCTL_INFRARED_TOGGLE                       (IOCTL_USER_START + 0x02)
 #define IOCTL_INFRARED_SET_CYCLE                    (IOCTL_USER_START + 0x03)
 #define IOCTL_INFRARED_GET_CYCLE                    (IOCTL_USER_START + 0x04)
+#define IOCTL_INFRARED_SET_FREQ                     (IOCTL_USER_START + 0x05)
+#define IOCTL_INFRARED_GET_FREQ                     (IOCTL_USER_START + 0x06)
 
 #define INFRARED_TOGGLE_REPEAT_MAX_COUNT            (0xFFFFFFFF)
 
@@ -50,6 +52,7 @@ typedef struct {
 } infrared_cycle_t;
 
 typedef struct {
+    uint32_t freq;
     infrared_cycle_t cycle;
     struct {
         bool (*init)(void);

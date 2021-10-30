@@ -35,21 +35,50 @@ static void timer_close(driver_t **pdrv);
 static int32_t timer_ioctl(driver_t **pdrv, uint32_t cmd, void *args);
 static int32_t timer_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *args, uint32_t len);
 
+static int32_t __ioctl_get_freq(timer_describe_t *pdesc, void *args);
+static int32_t __ioctl_set_freq(timer_describe_t *pdesc, void *args);
+static int32_t __ioctl_set_irq(timer_describe_t *pdesc, void *args);
+static int32_t __ioctl_enable(timer_describe_t *pdesc, void *args);
+static int32_t __ioctl_disable(timer_describe_t *pdesc, void *args);
+
 /*---------- type define ----------*/
+typedef int32_t (*ioctl_cb_func_t)(timer_describe_t *pdesc, void *args);
+typedef struct {
+    uint32_t cmd;
+    ioctl_cb_func_t cb;
+} ioctl_cb_t;
+
 /*---------- variable ----------*/
 DRIVER_DEFINED(timer, timer_open, timer_close, NULL, NULL, timer_ioctl, timer_irq_handler);
+static ioctl_cb_t ioctl_cb_array[] = {
+    {IOCTL_TIMER_GET_FREQ, __ioctl_get_freq},
+    {IOCTL_TIMER_SET_FREQ, __ioctl_set_freq},
+    {IOCTL_TIMER_SET_IRQ_HANDLER, __ioctl_set_irq},
+    {IOCTL_TIMER_ENABLE, __ioctl_enable},
+    {IOCTL_TIMER_DISABLE, __ioctl_disable}
+};
 
 /*---------- function ----------*/
 static int32_t timer_open(driver_t **pdrv)
 {
     timer_describe_t *pdesc = NULL;
-    int32_t retval = CY_EOK;
+    int32_t retval = CY_E_WRONG_ARGS;
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->init) {
-        retval = (pdesc->init() ? CY_EOK : CY_ERROR);
-    }
+    do {
+        if(!pdesc) {
+            __debug_error("Timer device has not bind describe field\n");
+            break;
+        }
+        retval = CY_EOK;
+        if(pdesc->ops.init) {
+            if(!pdesc->ops.init()) {
+                retval = CY_ERROR;
+                __debug_warn("Timer initialize bsp failed\n");
+            }
+        }
+    } while(0);
 
     return retval;
 }
@@ -60,54 +89,117 @@ static void timer_close(driver_t **pdrv)
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->deinit) {
-        pdesc->deinit();
+    if(pdesc && pdesc->ops.deinit) {
+        pdesc->ops.deinit();
     }
+}
+
+static int32_t __ioctl_get_freq(timer_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *freq = (uint32_t *)args;
+
+    if(!args) {
+        __debug_error("Args format error, can not get timer freq\n");
+    } else {
+        *freq = pdesc->freq;
+        retval = CY_EOK;
+    }
+
+    return retval;
+}
+
+static int32_t __ioctl_set_freq(timer_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *freq = (uint32_t *)args;
+
+    if(!args) {
+        __debug_error("Args format error, can not set timer freq\n");
+    } else {
+        if(pdesc->freq != *freq) {
+            pdesc->freq = *freq;
+            if(pdesc->ops.deinit) {
+                pdesc->ops.deinit();
+            }
+            if(pdesc->ops.init) {
+                pdesc->ops.init();
+            }
+        }
+        retval = CY_EOK;
+    }
+
+    return retval;
+}
+
+static int32_t __ioctl_set_irq(timer_describe_t *pdesc, void *args)
+{
+    timer_irq_handler_fn irq = (timer_irq_handler_fn)args;
+
+    pdesc->ops.irq_handler = irq;
+
+    return CY_EOK;
+}
+
+static int32_t __ioctl_enable(timer_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_ERROR;
+
+    if(pdesc->ops.enable) {
+        if(pdesc->ops.enable(true)) {
+            retval = CY_EOK;
+        }
+    }
+
+    return retval;
+}
+
+static int32_t __ioctl_disable(timer_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_ERROR;
+
+    if(pdesc->ops.enable) {
+        if(pdesc->ops.enable(false)) {
+            retval = CY_EOK;
+        }
+    }
+
+    return retval;
+}
+
+static ioctl_cb_func_t __ioctl_cb_func_find(uint32_t ioctl_cmd)
+{
+    ioctl_cb_func_t cb = NULL;
+
+    for(uint32_t i = 0; i < ARRAY_SIZE(ioctl_cb_array); ++i) {
+        if(ioctl_cb_array[i].cmd == ioctl_cmd) {
+            cb = ioctl_cb_array[i].cb;
+            break;
+        }
+    }
+
+    return cb;
 }
 
 static int32_t timer_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
 {
     timer_describe_t *pdesc = NULL;
     int32_t retval = CY_E_WRONG_ARGS;
+    ioctl_cb_func_t cb = NULL;
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    switch(cmd) {
-        case IOCTL_TIMER_GET_INTERVAL:
-            if(pdesc && args) {
-                *(uint32_t *)args = pdesc->interval_ms;
-                retval = CY_EOK;
-            }
+    do {
+        if(!pdesc) {
+            __debug_error("Timer driver has not bind describe field\n");
             break;
-        case IOCTL_TIMER_SET_INTERVAL:
-            if(pdesc && pdesc->init && args) {
-                uint32_t interval = *(uint32_t *)args;
-                if(pdesc->interval_ms != interval) {
-                    pdesc->interval_ms = interval;
-                    pdesc->init();
-                }
-                retval = CY_EOK;
-            }
+        }
+        if(NULL == (cb = __ioctl_cb_func_find(cmd))) {
+            __debug_error("Timer driver not support cmd(%08X)\n", cmd);
             break;
-        case IOCTL_TIMER_SET_IRQ_HANDLER:
-            if(pdesc && args) {
-                pdesc->irq_handler = (timer_irq_handler_fn)args;
-                retval = CY_EOK;
-            }
-            break;
-        case IOCTL_TIMER_ENABLE:
-            if(pdesc && pdesc->enable) {
-                retval = (pdesc->enable(true) ? CY_EOK : CY_ERROR);
-            }
-            break;
-        case IOCTL_TIMER_DISABLE:
-            if(pdesc && pdesc->enable) {
-                retval = (pdesc->enable(false) ? CY_EOK : CY_ERROR);
-            }
-            break;
-        default:
-            break;
-    }
+        }
+        retval = cb(pdesc, args);
+    } while(0);
 
     return retval;
 }
@@ -119,8 +211,8 @@ static int32_t timer_irq_handler(driver_t **pdrv, uint32_t irq_handler, void *ar
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->irq_handler) {
-        retval = pdesc->irq_handler(irq_handler, args, len);
+    if(pdesc && pdesc->ops.irq_handler) {
+        retval = pdesc->ops.irq_handler(irq_handler, args, len);
     }
 
     return retval;

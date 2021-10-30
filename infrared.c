@@ -39,6 +39,8 @@ static int32_t __ioctl_turn_off(infrared_describe_t *pdesc, void *args);
 static int32_t __ioctl_toggle(infrared_describe_t *pdesc, void *args);
 static int32_t __ioctl_set_cycle(infrared_describe_t *pdesc, void *args);
 static int32_t __ioctl_get_cycle(infrared_describe_t *pdesc, void *args);
+static int32_t __ioctl_set_freq(infrared_describe_t *pdesc, void *args);
+static int32_t __ioctl_get_freq(infrared_describe_t *pdesc, void *args);
 
 /*---------- type define ----------*/
 typedef int32_t (*ioctl_cb_func_t)(infrared_describe_t *pdesc, void *args);
@@ -55,7 +57,9 @@ static ioctl_cb_t ioctl_cb_array[] = {
     {IOCTL_INFRARED_TURN_OFF, __ioctl_turn_off},
     {IOCTL_INFRARED_TOGGLE, __ioctl_toggle},
     {IOCTL_INFRARED_SET_CYCLE, __ioctl_set_cycle},
-    {IOCTL_INFRARED_GET_CYCLE, __ioctl_get_cycle}
+    {IOCTL_INFRARED_GET_CYCLE, __ioctl_get_cycle},
+    {IOCTL_INFRARED_SET_FREQ, __ioctl_set_freq},
+    {IOCTL_INFRARED_GET_FREQ, __ioctl_get_freq}
 };
 
 /*---------- function ----------*/
@@ -170,6 +174,44 @@ static int32_t __ioctl_get_cycle(infrared_describe_t *pdesc, void *args)
     } else {
         cycle = (infrared_cycle_t *)args;
         *cycle = pdesc->cycle;
+        retval = CY_EOK;
+    }
+
+    return retval;
+}
+
+static int32_t __ioctl_set_freq(infrared_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *freq = (uint32_t *)args;
+
+    if(!args) {
+        __debug_error("Args format error, can not set freq for infrared\n");
+    } else {
+        if(pdesc->freq != *freq) {
+            pdesc->freq = *freq;
+            if(pdesc->ops.deinit) {
+                pdesc->ops.deinit();
+            }
+            if(pdesc->ops.init) {
+                pdesc->ops.init();
+            }
+        }
+        retval = CY_EOK;
+    }
+
+    return retval;
+}
+
+static int32_t __ioctl_get_freq(infrared_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *freq = (uint32_t *)args;
+
+    if(!args) {
+        __debug_error("Args format error, can not get infrared freq\n");
+    } else {
+        *freq = pdesc->freq;
         retval = CY_EOK;
     }
 

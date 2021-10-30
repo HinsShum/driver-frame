@@ -35,8 +35,8 @@ extern "C"
 #include "device.h"
 
 /*---------- macro ----------*/
-#define IOCTL_TIMER_GET_INTERVAL                    (IOCTL_USER_START + 0x00)
-#define IOCTL_TIMER_SET_INTERVAL                    (IOCTL_USER_START + 0x01)
+#define IOCTL_TIMER_GET_FREQ                        (IOCTL_USER_START + 0x00)
+#define IOCTL_TIMER_SET_FREQ                        (IOCTL_USER_START + 0x01)
 #define IOCTL_TIMER_SET_IRQ_HANDLER                 (IOCTL_USER_START + 0x02)
 #define IOCTL_TIMER_ENABLE                          (IOCTL_USER_START + 0x03)
 #define IOCTL_TIMER_DISABLE                         (IOCTL_USER_START + 0x04)
@@ -45,11 +45,13 @@ extern "C"
 typedef int32_t (*timer_irq_handler_fn)(uint32_t irq_handler, void *args, uint32_t len);
 
 typedef struct {
-    uint32_t interval_ms;
-    bool (*init)(void);
-    void (*deinit)(void);
-    bool (*enable)(bool ctrl);
-    timer_irq_handler_fn irq_handler;
+    uint32_t freq;
+    struct {
+        bool (*init)(void);
+        void (*deinit)(void);
+        bool (*enable)(bool ctrl);
+        timer_irq_handler_fn irq_handler;
+    } ops;
 } timer_describe_t;
 
 /*---------- variable prototype ----------*/
