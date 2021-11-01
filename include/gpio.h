@@ -44,12 +44,14 @@ extern "C"
 typedef int32_t (*gpio_irq_handler_fn)(uint32_t, void *, uint32_t);
 
 typedef struct {
-    bool (*init)(void);
-    void (*deinit)(void);
-    bool (*get)(void);
-    void (*set)(bool val);
-    void (*toggle)(void);
-    gpio_irq_handler_fn irq_handler;
+    struct {
+        bool (*init)(void);
+        void (*deinit)(void);
+        bool (*get)(void);
+        void (*set)(bool val);
+        void (*toggle)(void);
+        gpio_irq_handler_fn irq_handler;
+    } ops;
 } gpio_describe_t;
 
 /*---------- variable prototype ----------*/
