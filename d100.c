@@ -45,6 +45,8 @@ static int32_t __ioctl_set_irq(d100_describe_t *pdesc, void *args);
 static int32_t __ioctl_get_baudrate(d100_describe_t *pdesc, void *args);
 static int32_t __ioctl_set_baudrate(d100_describe_t *pdesc, void *args);
 static int32_t __ioctl_clear_status(d100_describe_t *pdesc, void *args);
+static int32_t __ioctl_power_on(d100_describe_t *pdesc, void *args);
+static int32_t __ioctl_power_off(d100_describe_t *pdesc, void *args);
 
 static int32_t __write_version(d100_describe_t *pdesc, uint8_t *buf, uint32_t length);
 static int32_t __write_reset(d100_describe_t *pdesc, uint8_t *buf, uint32_t length);
@@ -84,7 +86,9 @@ static ioctl_cb_t ioctl_cb_array[] = {
     {IOCTL_D100_SET_IRQ_HANDLER, __ioctl_set_irq},
     {IOCTL_D100_GET_BAUDRATE, __ioctl_get_baudrate},
     {IOCTL_D100_SET_BAUDRATE, __ioctl_set_baudrate},
-    {IOCTL_D100_CLEAR_STATUS, __ioctl_clear_status}
+    {IOCTL_D100_CLEAR_STATUS, __ioctl_clear_status},
+    {IOCTL_DEVICE_POWER_ON, __ioctl_power_on},
+    {IOCTL_DEVICE_POWER_OFF, __ioctl_power_off}
 };
 static write_cb_t write_cb_array[] = {
     {D100_MSGID_VERSION, __write_version},
@@ -114,6 +118,12 @@ static int32_t _open(driver_t **pdrv)
         retval = CY_EOK;
         pingpong_buffer_init(&pdesc->pingpong, &pdesc->buffer1, &pdesc->buffer2);
         pingpong_buffer_get_write_buf(&pdesc->pingpong, (void **)&pdesc->cur_buffer);
+        if(pdesc->gpio.ops.init) {
+            if(!pdesc->gpio.ops.init()) {
+                retval = CY_ERROR;
+                break;
+            }
+        }
         if(pdesc->serial.ops.init) {
             if(!pdesc->serial.ops.init()) {
                 retval = CY_ERROR;
@@ -130,8 +140,13 @@ static void _close(driver_t **pdrv)
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->serial.ops.deinit) {
-        pdesc->serial.ops.deinit();
+    if(pdesc) {
+        if(pdesc->serial.ops.deinit) {
+            pdesc->serial.ops.deinit();
+        }
+        if(pdesc->gpio.ops.deinit) {
+            pdesc->gpio.ops.deinit();
+        }
     }
 }
 
@@ -739,6 +754,24 @@ static int32_t __ioctl_set_baudrate(d100_describe_t *pdesc, void *args)
 static int32_t __ioctl_clear_status(d100_describe_t *pdesc, void *args)
 {
     pdesc->status.state = STATE_IDLE;
+
+    return CY_EOK;
+}
+
+static int32_t __ioctl_power_on(d100_describe_t *pdesc, void *args)
+{
+    if(pdesc->gpio.ops.set) {
+        pdesc->gpio.ops.set(true);
+    }
+
+    return CY_EOK;
+}
+
+static int32_t __ioctl_power_off(d100_describe_t *pdesc, void *args)
+{
+    if(pdesc->gpio.ops.set) {
+        pdesc->gpio.ops.set(false);
+    }
 
     return CY_EOK;
 }

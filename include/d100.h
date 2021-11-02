@@ -33,6 +33,7 @@ extern "C"
 #include <stdbool.h>
 #include <stddef.h>
 #include "serial.h"
+#include "gpio.h"
 #include "pingpong_buffer.h"
 
 /*---------- macro ----------*/
@@ -259,6 +260,7 @@ typedef struct {
 
 typedef struct {
     serial_describe_t serial;
+    gpio_describe_t gpio;
     struct {
         uint8_t msgid;
         d100_state_en_t state;
