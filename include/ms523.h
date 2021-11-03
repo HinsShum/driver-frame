@@ -45,11 +45,13 @@ extern "C"
 typedef struct {
     uint8_t card_type[2];
     uint8_t card_id[4];
-    bool (*init)(void);
-    void (*deinit)(void);
-    uint8_t (*xfer)(uint8_t data);
-    void (*cs_ctrl)(bool ctrl);
-    void (*reset_ctrl)(bool ctrl);
+    struct {
+        bool (*init)(void);
+        void (*deinit)(void);
+        uint8_t (*xfer)(uint8_t data);
+        void (*cs_ctrl)(bool ctrl);
+        void (*reset_ctrl)(bool ctrl);
+    } ops;
 } ms523_describe_t;
 
 /*---------- variable prototype ----------*/

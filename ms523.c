@@ -293,6 +293,12 @@ static int32_t ms523_open(driver_t **pdrv);
 static void ms523_close(driver_t **pdrv);
 static int32_t ms523_ioctl(driver_t **pdrv, uint32_t cmd, void *args);
 
+static int32_t __ioctl_pcd_request_idle(ms523_describe_t *pdesc, void *args);
+static int32_t __ioctl_pcd_request_all(ms523_describe_t *pdesc, void *args);
+static int32_t __ioctl_pcd_halt(ms523_describe_t *pdesc, void *args);
+static int32_t __ioctl_pcd_anticoll(ms523_describe_t *pdesc, void *args);
+static int32_t __ioctl_pcd_select(ms523_describe_t *pdesc, void *args);
+
 /*---------- type define ----------*/
 typedef enum {
     MS523_CARD_TYPE_ISO14443_A,
@@ -304,17 +310,31 @@ typedef enum {
     MS523_PCD_REQUEST_ALL = PICC_COMMAND_REQUEST_ALL
 } ms523_pcd_request_type_en;
 
+typedef int32_t (*ioctl_cb_func_t)(ms523_describe_t *pdesc, void *args);
+typedef struct {
+    uint32_t ioctl_cmd;
+    ioctl_cb_func_t cb;
+} ioctl_cb_t;
+
 /*---------- variable ----------*/
 DRIVER_DEFINED(ms523, ms523_open, ms523_close, NULL, NULL, ms523_ioctl, NULL);
+
+static ioctl_cb_t ioctl_cb_array[] = {
+    {IOCTL_MS523_PCD_HALT, __ioctl_pcd_halt},
+    {IOCTL_MS523_PCD_REQUEST_IDLE, __ioctl_pcd_request_idle},
+    {IOCTL_MS523_PCD_REQUEST_ALL, __ioctl_pcd_request_all},
+    {IOCTL_MS523_PCD_ANTICOLL, __ioctl_pcd_anticoll},
+    {IOCTL_MS523_PCD_SELECT, __ioctl_pcd_select}
+};
 
 /*---------- function ----------*/
 static void ms523_write_reg(ms523_describe_t *pdesc, uint8_t reg, uint8_t value)
 {
     reg = (reg << 1) & 0x7E;
-    pdesc->cs_ctrl(true);
-    pdesc->xfer(reg);
-    pdesc->xfer(value);
-    pdesc->cs_ctrl(false);
+    pdesc->ops.cs_ctrl(true);
+    pdesc->ops.xfer(reg);
+    pdesc->ops.xfer(value);
+    pdesc->ops.cs_ctrl(false);
 }
 
 static uint8_t ms523_read_reg(ms523_describe_t *pdesc, uint8_t reg)
@@ -322,19 +342,19 @@ static uint8_t ms523_read_reg(ms523_describe_t *pdesc, uint8_t reg)
     uint8_t value = 0;
 
     reg = ((reg << 1) & 0x7E) | 0x80;
-    pdesc->cs_ctrl(true);
-    pdesc->xfer(reg);
-    value = pdesc->xfer(0x00);
-    pdesc->cs_ctrl(false);
+    pdesc->ops.cs_ctrl(true);
+    pdesc->ops.xfer(reg);
+    value = pdesc->ops.xfer(0x00);
+    pdesc->ops.cs_ctrl(false);
 
     return value;
 }
 
 static void ms523_reset(ms523_describe_t *pdesc)
 {
-    pdesc->reset_ctrl(true);
+    pdesc->ops.reset_ctrl(true);
     __delay_us(10);
-    pdesc->reset_ctrl(false);
+    pdesc->ops.reset_ctrl(false);
     __delay_us(100);
     ms523_write_reg(pdesc, REG_COMMAND, REG_COMMAND_CMD_SOFTRESET);
     while(REG_COMMAND_POWERDOWN == (ms523_read_reg(pdesc, REG_COMMAND) & REG_COMMAND_POWERDOWN_MSK));
@@ -389,23 +409,30 @@ static void ms523_pcd_antenna_ctrl(ms523_describe_t *pdesc, bool ctrl)
 static int32_t ms523_open(driver_t **pdrv)
 {
     ms523_describe_t *pdesc = NULL;
-    int32_t retval = CY_EOK;
+    int32_t retval = CY_E_WRONG_ARGS;
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->init) {
-        if(pdesc->init()) {
+    do {
+        if(!pdesc) {
+            __debug_error("MS523 device has not bind describe field\n");
+            break;
+        }
+        retval = CY_EOK;
+        if(pdesc->ops.init) {
+            if(!pdesc->ops.init()) {
+                retval = CY_ERROR;
+                __debug_error("MS523 initialize failed\n");
+                break;
+            }
             ms523_reset(pdesc);
             __debug_info("MS523 version: %02X\n", ms523_read_reg(pdesc, REG_VERSION));
             ms523_pcd_config_iso_type(pdesc, MS523_CARD_TYPE_ISO14443_A);
             ms523_pcd_antenna_ctrl(pdesc, false);
             __delay_ms(100);
             ms523_pcd_antenna_ctrl(pdesc, true);
-        } else {
-            retval = CY_ERROR;
-            __debug_error("MS523 bsp initialize failed\n");
         }
-    }
+    } while(0);
 
     return retval;
 }
@@ -416,8 +443,8 @@ static void ms523_close(driver_t **pdrv)
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    if(pdesc && pdesc->deinit) {
-        pdesc->deinit();
+    if(pdesc && pdesc->ops.deinit) {
+        pdesc->ops.deinit();
     }
 }
 
@@ -632,43 +659,99 @@ static int32_t ms523_pcd_select(ms523_describe_t *pdesc)
     return retval;
 }
 
+static int32_t __ioctl_pcd_request_idle(ms523_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint8_t **pbuf = (uint8_t **)args;
+
+    do {
+        if(!args) {
+            __debug_error("Args format error, can not request pcd idle\n");
+            break;
+        }
+        retval = ms523_pcd_request(pdesc, MS523_PCD_REQUEST_IDLE, pbuf);
+    } while(0);
+
+    return retval;
+}
+
+static int32_t __ioctl_pcd_request_all(ms523_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint8_t **pbuf = (uint8_t **)args;
+
+    do {
+        if(!args) {
+            __debug_error("Args format error, can not request pcd all\n");
+            break;
+        }
+        retval = ms523_pcd_request(pdesc, MS523_PCD_REQUEST_ALL, pbuf);
+    } while(0);
+
+    return retval;
+}
+
+static int32_t __ioctl_pcd_halt(ms523_describe_t *pdesc, void *args)
+{
+    ms523_pcd_halt(pdesc);
+
+    return CY_EOK;
+}
+
+static int32_t __ioctl_pcd_anticoll(ms523_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint8_t **pbuf = (uint8_t **)args;
+
+    do {
+        if(!args) {
+            __debug_error("Args format error, can not ioctl pcd anticoll\n");
+            break;
+        }
+        retval = ms523_pcd_anticoll(pdesc, pbuf);
+    } while(0);
+
+    return retval;
+}
+
+static int32_t __ioctl_pcd_select(ms523_describe_t *pdesc, void *args)
+{
+    return ms523_pcd_select(pdesc);
+}
+
+static ioctl_cb_func_t __ioctl_cb_func_find(uint32_t ioctl_cmd)
+{
+    ioctl_cb_func_t cb = NULL;
+
+    for(uint32_t i = 0; i < ARRAY_SIZE(ioctl_cb_array); ++i) {
+        if(ioctl_cb_array[i].ioctl_cmd == ioctl_cmd) {
+            cb = ioctl_cb_array[i].cb;
+            break;
+        }
+    }
+
+    return cb;
+}
+
 static int32_t ms523_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
 {
     ms523_describe_t *pdesc = NULL;
     int32_t retval = CY_E_WRONG_ARGS;
+    ioctl_cb_func_t cb = NULL;
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    switch(cmd) {
-        case IOCTL_MS523_PCD_HALT:
-            if(pdesc) {
-                ms523_pcd_halt(pdesc);
-                retval = CY_EOK;
-            }
+    do {
+        if(!pdesc) {
+            __debug_error("MS523 driver has not bind describe field\n");
             break;
-        case IOCTL_MS523_PCD_REQUEST_IDLE:
-            if(pdesc && args) {
-                retval = ms523_pcd_request(pdesc, MS523_PCD_REQUEST_IDLE, (uint8_t **)args);
-            }
+        }
+        if(NULL == (cb = __ioctl_cb_func_find(cmd))) {
+            __debug_error("MS523 driver not support cmd(%08X)\n", cmd);
             break;
-        case IOCTL_MS523_PCD_REQUEST_ALL:
-            if(pdesc && args) {
-                retval = ms523_pcd_request(pdesc, MS523_PCD_REQUEST_ALL, (uint8_t **)args);
-            }
-            break;
-        case IOCTL_MS523_PCD_ANTICOLL:
-            if(pdesc && args) {
-                retval = ms523_pcd_anticoll(pdesc, (uint8_t **)args);
-            }
-            break;
-        case IOCTL_MS523_PCD_SELECT:
-            if(pdesc) {
-                retval = ms523_pcd_select(pdesc);
-            }
-            break;
-        default:
-            break;
-    }
+        }
+        retval = cb(pdesc, args);
+    } while(0);
 
     return retval;
 }
