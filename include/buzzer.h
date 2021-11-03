@@ -47,16 +47,18 @@ extern "C"
 typedef struct {
     uint32_t cycle_time;
     uint32_t cycle_count;
-    bool (*init)(void);
-    void (*deinit)(void);
-    void (*ctrl)(bool on);
-    void (*toggle)(void);
-} buzzer_describe_t;
+} buzzer_cycle_t;
 
 typedef struct {
-    uint32_t cycle_time;
-    uint32_t cycle_count;
-} buzzer_cycle_t;
+    uint32_t freq;
+    buzzer_cycle_t cycle;
+    struct {
+        bool (*init)(void);
+        void (*deinit)(void);
+        void (*ctrl)(bool on);
+        void (*toggle)(void);
+    } ops;
+} buzzer_describe_t;
 
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
