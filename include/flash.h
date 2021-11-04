@@ -105,10 +105,26 @@ extern "C"
 #define IOCTL_FLASH_SET_CALLBACK                    (IOCTL_USER_START + 0x04)
 
 /**
+ * @brief Set lock function for the flash device.
+ * @note Operate flash in a multi-threaded environment, must use lock/unlock 
+ *       before read, write or erase.
+ * @retval Always return CY_EOK.
+ */
+#define IOCTL_FLASH_SET_LOCK                        (IOCTL_USER_START + 0x05)
+
+/**
+ * @brief Set unlock function for the flash device.
+ * @note Operate flash in a multi-threaded environment, must use lock/unlock 
+ *       before read, write or erase.
+ * @retval Always return CY_EOK.
+ */
+#define IOCTL_FLASH_SET_UNLOCK                      (IOCTL_USER_START + 0x06)
+
+/**
  * @brief The IOCTL_FLASH_INHERIT_START is used when other drivers to inherit 
  *        the flash driver.
  */
-#define IOCTL_FLASH_INHERIT_START                   (IOCTL_USER_START + 0x05)
+#define IOCTL_FLASH_INHERIT_START                   (IOCTL_USER_START + 0x07)
 
 /*---------- type define ----------*/
 typedef struct {
@@ -120,6 +136,8 @@ typedef struct {
     bool (*erase_chip)(void);
     bool (*addr_is_block_start)(uint32_t offset);
     void (*cb)(void);
+    void (*lock)(void);
+    void (*unlock)(void);
 } flash_ops_t;
 
 typedef struct {

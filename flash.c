@@ -43,6 +43,8 @@ static int32_t _ioctl_flash_erase_chip(flash_describe_t *pdesc, void *args);
 static int32_t _ioctl_flash_check_addr_is_block_start(flash_describe_t *pdesc, void *args);
 static int32_t _ioctl_flash_get_info(flash_describe_t *pdesc, void *args);
 static int32_t _ioctl_flash_set_callback(flash_describe_t *pdesc, void *args);
+static int32_t _ioctl_flash_set_lock(flash_describe_t *pdesc, void *args);
+static int32_t _ioctl_flash_set_unlock(flash_describe_t *pdesc, void *args);
 
 /*---------- type define ----------*/
 typedef int32_t (*ioctl_cb_func_t)(flash_describe_t *pdesc, void *args);
@@ -63,7 +65,9 @@ static ioctl_cb_t ioctl_cb_array[] = {
     {IOCTL_FLASH_ERASE_CHIP, _ioctl_flash_erase_chip},
     {IOCTL_FLASH_CHECK_ADDR_IS_BLOCK_START, _ioctl_flash_check_addr_is_block_start},
     {IOCTL_FLASH_GET_INFO, _ioctl_flash_get_info},
-    {IOCTL_FLASH_SET_CALLBACK, _ioctl_flash_set_callback}
+    {IOCTL_FLASH_SET_CALLBACK, _ioctl_flash_set_callback},
+    {IOCTL_FLASH_SET_LOCK, _ioctl_flash_set_lock},
+    {IOCTL_FLASH_SET_UNLOCK, _ioctl_flash_set_unlock}
 };
 
 /*---------- function ----------*/
@@ -233,6 +237,24 @@ static int32_t _ioctl_flash_set_callback(flash_describe_t *pdesc, void *args)
     } while(0);
 
     return retval;
+}
+
+static int32_t _ioctl_flash_set_lock(flash_describe_t *pdesc, void *args)
+{
+    void (*cb)(void) = (void (*)(void))args;
+
+    pdesc->ops.lock = cb;
+
+    return CY_EOK;
+}
+
+static int32_t _ioctl_flash_set_unlock(flash_describe_t *pdesc, void *args)
+{
+    void (*cb)(void) = (void (*)(void))args;
+
+    pdesc->ops.unlock = cb;
+
+    return CY_EOK;
 }
 
 static ioctl_cb_func_t _ioctl_cb_func_find(uint32_t ioctl_cmd)
