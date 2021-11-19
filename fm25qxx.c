@@ -28,7 +28,6 @@
 #include "config/errorno.h"
 
 /*---------- macro ----------*/
-#define FM25QXX_MANUFACTURER_ID                 (0xA1)
 #define FM25QXX_DEVICE_ID_02                    (0x11)
 #define FM25QXX_DEVICE_ID_04                    (0x12)
 #define FM25QXX_DEVICE_ID_08                    (0x13)
@@ -42,6 +41,22 @@
 
 #define FM25QXX_PAGE_SIZE                       (0x100)
 
+#define _DO_CALLBACK(dev)                       do {                                \
+                                                    if(dev->flash.ops.cb) {         \
+                                                        dev->flash.ops.cb();        \
+                                                    }                               \
+                                                } while(0)
+#define _DO_LOCK(dev)                           do {                                \
+                                                    if(dev->flash.ops.lock) {       \
+                                                        dev->flash.ops.lock();      \
+                                                    }                               \
+                                                } while(0);
+#define _DO_UNLOCK(dev)                         do {                                \
+                                                    if(dev->flash.ops.unlock) {     \
+                                                        dev->flash.ops.unlock();    \
+                                                    }                               \
+                                                } while(0);
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t fm25qxx_open(driver_t **pdrv);
@@ -50,9 +65,45 @@ static int32_t fm25qxx_write(driver_t **pdrv, void *buf, uint32_t addr, uint32_t
 static int32_t fm25qxx_read(driver_t **pdrv, void *buf, uint32_t addr, uint32_t len);
 static int32_t fm25qxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args);
 
+static int32_t _ioctl_erase_block(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_erase_chip(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_get_info(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_get_idcode(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_set_callback(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_set_lock(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_set_unlock(fm25qxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_block_start_check(fm25qxx_describe_t *pdesc, void *args);
+
 /*---------- type define ----------*/
+typedef int32_t (*ioctl_cb_func_t)(fm25qxx_describe_t *pdesc, void *args);
+typedef struct {
+    uint32_t cmd;
+    ioctl_cb_func_t cb;
+} ioctl_cb_t;
+
 /*---------- variable ----------*/
 DRIVER_DEFINED(fm25qxx, fm25qxx_open, fm25qxx_close, fm25qxx_write, fm25qxx_read, fm25qxx_ioctl, NULL);
+
+static ioctl_cb_t ioctl_cb_array[] = {
+    {IOCTL_FLASH_ERASE_BLOCK, _ioctl_erase_block},
+    {IOCTL_FLASH_ERASE_CHIP, _ioctl_erase_chip},
+    {IOCTL_FLASH_CHECK_ADDR_IS_BLOCK_START, _ioctl_block_start_check},
+    {IOCTL_FLASH_GET_INFO, _ioctl_get_info},
+    {IOCTL_FLASH_SET_CALLBACK, _ioctl_set_callback},
+    {IOCTL_FLASH_SET_LOCK, _ioctl_set_lock},
+    {IOCTL_FLASH_SET_UNLOCK, _ioctl_set_unlock},
+    {IOCTL_FM25QXX_GET_IDCODE, _ioctl_get_idcode}
+};
+
+/* support manufacture id table
+ */
+static uint8_t _support_manufacture_id[] = {
+    0xA1,       /*<< fudan micro serial nor flash */
+    0xEF        /*<< winbond serial nor flash */
+};
+
+/* different seiral nor flash information table
+ */
 static flash_info_t fm25qxx_serials[] = {
     [0] = {
         .start = 0,
@@ -92,6 +143,20 @@ static flash_info_t fm25qxx_serials[] = {
 };
 
 /*---------- function ----------*/
+static bool _manufacture_support_check(uint8_t manufacture_id)
+{
+    bool support = false;
+
+    for(uint8_t i = 0; i < ARRAY_SIZE(_support_manufacture_id); ++i) {
+        if(manufacture_id == _support_manufacture_id[i]) {
+            support = true;
+            break;
+        }
+    }
+
+    return support;
+}
+
 static void fm25qxx_getid(fm25qxx_describe_t *pdesc)
 {
     pdesc->idcode = 0;
@@ -161,6 +226,7 @@ static int32_t fm25qxx_erase_sector(fm25qxx_describe_t *pdesc, uint32_t addr)
                 retval = CY_EOK;
                 break;
             }
+            _DO_CALLBACK(pdesc);
             __delay_ms(1);
         } while(--timeout > 0);
     } while(0);
@@ -187,6 +253,7 @@ static int32_t fm25qxx_erase_chip(fm25qxx_describe_t *pdesc)
                 retval = CY_EOK;
                 break;
             }
+            _DO_CALLBACK(pdesc);
             __delay_ms(1);
         } while(--timeout > 0);
     } while(0);
@@ -248,11 +315,15 @@ static int32_t fm25qxx_open(driver_t **pdrv)
             fm25qxx_getid(pdesc);
             do {
                 uint8_t device_id = (pdesc->idcode & 0xFF);
-                if(((pdesc->idcode >> 8) & 0xFF) != FM25QXX_MANUFACTURER_ID) {
+                uint8_t manufacture_id = (pdesc->idcode >> 8) & 0xFF;
+                __debug_message("FM25QXX idcode: %04X\n", pdesc->idcode);
+                if(_manufacture_support_check(manufacture_id) != true) {
+                    __debug_error("FM25QXX driver not support this manufacture id(%02X)\n", manufacture_id);
                     retval = CY_ERROR;
                     break;
                 }
                 if(device_id < FM25QXX_DEVICE_ID_02 || device_id > FM25QXX_DEVICE_ID_128) {
+                    __debug_error("FM25QXX driver not support this device id(%02X)\n", device_id);
                     retval = CY_ERROR;
                     break;
                 }
@@ -297,13 +368,16 @@ static int32_t fm25qxx_write(driver_t **pdrv, void *buf, uint32_t addr, uint32_t
         if((addr + len) > pdesc->flash.end) {
             break;
         }
+        _DO_LOCK(pdesc);
         do {
             int32_t result = fm25qxx_write_page(pdesc, addr + length, &pdata[length], (len - length));
             if(0 == result) {
                 break;
             }
+            _DO_CALLBACK(pdesc);
             length += result;
         } while(length < len);
+        _DO_UNLOCK(pdesc);
     } while(0);
 
     return (int32_t)length;
@@ -330,6 +404,7 @@ static int32_t fm25qxx_read(driver_t **pdrv, void *buf, uint32_t addr, uint32_t 
         } else {
             length = len;
         }
+        _DO_LOCK(pdesc);
         pdesc->cs_ctrl(true);
         pdesc->xfer(0x03);
         pdesc->xfer((uint8_t)((addr >> 16) & 0xFF));
@@ -339,67 +414,154 @@ static int32_t fm25qxx_read(driver_t **pdrv, void *buf, uint32_t addr, uint32_t 
             pdata[i] = pdesc->xfer(0x00);
         }
         pdesc->cs_ctrl(false);
+        _DO_UNLOCK(pdesc);
+        _DO_CALLBACK(pdesc);
     } while(0);
 
     return (int32_t)length;
 }
 
+static int32_t _ioctl_erase_block(fm25qxx_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *paddr = (uint32_t *)args;
+
+    do {
+        if(!args) {
+            break;
+        }
+        retval = CY_ERROR;
+        _DO_LOCK(pdesc);
+        if(fm25qxx_erase_sector(pdesc, *paddr) == CY_EOK) {
+            retval = (int32_t)pdesc->flash.block_size;
+        }
+        _DO_UNLOCK(pdesc);
+    } while(0);
+
+    return retval;
+}
+
+static int32_t _ioctl_erase_chip(fm25qxx_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_ERROR;
+
+    _DO_LOCK(pdesc);
+    retval = fm25qxx_erase_chip(pdesc);
+    _DO_UNLOCK(pdesc);
+
+    return retval;
+}
+
+static int32_t _ioctl_get_info(fm25qxx_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    flash_info_t *pinfo = (flash_info_t *)args;
+
+    do {
+        if(!args) {
+            break;
+        }
+        pinfo->start = pdesc->flash.start;
+        pinfo->end = pdesc->flash.end;
+        pinfo->block_size = pdesc->flash.block_size;
+        retval = CY_EOK;
+    } while(0);
+
+    return retval;
+}
+
+static int32_t _ioctl_get_idcode(fm25qxx_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *idcode = (uint32_t *)args;
+
+    do {
+        if(!args) {
+            break;
+        }
+        *idcode = pdesc->idcode;
+        retval = CY_EOK;
+    } while(0);
+
+    return retval;
+}
+
+static int32_t _ioctl_set_callback(fm25qxx_describe_t *pdesc, void *args)
+{
+    pdesc->flash.ops.cb = (void (*)(void))args;
+
+    return CY_EOK;
+}
+
+static int32_t _ioctl_set_lock(fm25qxx_describe_t *pdesc, void *args)
+{
+    pdesc->flash.ops.lock = (void (*)(void))args;
+
+    return CY_EOK;
+}
+
+static int32_t _ioctl_set_unlock(fm25qxx_describe_t *pdesc, void *args)
+{
+    pdesc->flash.ops.unlock = (void (*)(void))args;
+
+    return CY_EOK;
+}
+
+static int32_t _ioctl_block_start_check(fm25qxx_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+    uint32_t *paddr = (uint32_t *)args;
+
+    do {
+        if(!args) {
+            break;
+        }
+        if(!pdesc->flash.ops.addr_is_block_start) {
+            break;
+        }
+        if(pdesc->flash.ops.addr_is_block_start(*paddr)) {
+            retval = CY_EOK;
+        } else {
+            retval = CY_ERROR;
+        }
+    } while(0);
+
+    return retval;
+}
+
+static ioctl_cb_func_t _ioctl_cb_func_find(uint32_t cmd)
+{
+    ioctl_cb_func_t cb = NULL;
+
+    for(uint32_t i = 0; i < ARRAY_SIZE(ioctl_cb_array); ++i) {
+        if(cmd == ioctl_cb_array[i].cmd) {
+            cb = ioctl_cb_array[i].cb;
+            break;
+        }
+    }
+
+    return cb;
+}
+
 static int32_t fm25qxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
 {
     fm25qxx_describe_t *pdesc = NULL;
-    int32_t retval = CY_ERROR;
-    flash_info_t *pinfo = NULL;
+    int32_t retval = CY_E_WRONG_ARGS;
+    ioctl_cb_func_t cb = NULL;
 
     assert(pdrv);
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
-    switch(cmd) {
-        case IOCTL_FLASH_ERASE_BLOCK:
-            if(pdesc) {
-                retval = fm25qxx_erase_sector(pdesc, *(uint32_t *)args);
-            }
+    do {
+        if(!pdesc) {
+            __debug_error("FM25QXX device has no describe field\n");
             break;
-        case IOCTL_FLASH_ERASE_CHIP:
-            if(pdesc) {
-                retval = fm25qxx_erase_chip(pdesc);
-            }
+        }
+        if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
+            __debug_error("FM25QXX driver not support this command(%08X)\n", cmd);
             break;
-        case IOCTL_FLASH_GET_INFO:
-            if(pdesc) {
-                pinfo = (flash_info_t *)args;
-                pinfo->start = pdesc->flash.start;
-                pinfo->end = pdesc->flash.end;
-                pinfo->block_size = pdesc->flash.block_size;
-                retval = CY_EOK;
-            }
-            break;
-        case IOCTL_FM25QXX_GET_IDCODE:
-            if(pdesc) {
-                *(uint16_t *)args = pdesc->idcode;
-                retval = CY_EOK;
-            }
-            break;
-        case IOCTL_FLASH_SET_CALLBACK:
-            if(pdesc) {
-                pdesc->flash.ops.cb = (void (*)(void))args;
-                retval = CY_EOK;
-            }
-            break;
-        case IOCTL_FLASH_CHECK_ADDR_IS_BLOCK_START:
-            if(pdesc && args) {
-                uint32_t *paddr = (uint32_t *)args;
-                if(pdesc->flash.ops.addr_is_block_start) {
-                    if(!pdesc->flash.ops.addr_is_block_start(*paddr)) {
-                        retval = CY_ERROR;
-                    } else {
-                        retval = CY_EOK;
-                    }
-                }
-            }
-            break;
-        default:
-            retval = CY_E_WRONG_ARGS;
-            break;
-    }
+        }
+        retval = cb(pdesc, args);
+    } while(0);
 
     return retval;
 }
