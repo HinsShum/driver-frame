@@ -224,19 +224,12 @@ static int32_t _ioctl_flash_get_info(flash_describe_t *pdesc, void *args)
 
 static int32_t _ioctl_flash_set_callback(flash_describe_t *pdesc, void *args)
 {
-    int32_t retval = CY_E_WRONG_ARGS;
     void (*cb)(void) = (void (*)(void))args;
 
-    do {
-        if(!args) {
-            __debug_error("Args is NULL, no callback to bind the flash device\n");
-            break;
-        }
-        pdesc->ops.cb = cb;
-        retval = CY_EOK;
-    } while(0);
+    pdesc->ops.cb = cb;
 
-    return retval;
+
+    return CY_EOK;
 }
 
 static int32_t _ioctl_flash_set_lock(flash_describe_t *pdesc, void *args)
