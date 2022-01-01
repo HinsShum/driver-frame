@@ -74,17 +74,23 @@ void *device_open(char *name)
 
 void device_close(device_t *dev)
 {
-    if(dev->count) {
-        dev->count--;
-    }
-    if(!dev->count) {
+    do {
+        if(!dev) {
+            break;
+        }
+        if(dev->count) {
+            dev->count--;
+        }
+        if(dev->count) {
+            break;
+        }
         if(__device_attrib_isstart(dev->attribute)) {
-            if(dev && dev->pdrv && ((driver_t *)dev->pdrv)->close) {
+            if(dev->pdrv && ((driver_t *)dev->pdrv)->close) {
                 ((driver_t *)dev->pdrv)->close((driver_t **)(&dev->pdrv));
             }
             __device_attrib_setstart(dev->attribute, DEVICE_ATTRIB_IDLE);
         }
-    }
+    } while(0);
 }
 
 int32_t device_write(device_t *dev, void *buf, uint32_t addition, uint32_t len)
