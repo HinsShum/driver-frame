@@ -24,8 +24,8 @@
 /*---------- includes ----------*/
 #include "seps525.h"
 #include "driver.h"
-#include "config/errorno.h"
-#include "config/options.h"
+#include "errorno.h"
+#include "options.h"
 
 /*---------- macro ----------*/
 /* oled的分辨率

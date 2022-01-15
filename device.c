@@ -22,7 +22,7 @@
 /*---------- includes ----------*/
 #include "device.h"
 #include "driver.h"
-#include "config/errorno.h"
+#include "errorno.h"
 #include <string.h>
 
 /*---------- macro ----------*/

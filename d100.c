@@ -26,8 +26,8 @@
 #include "driver.h"
 #include "utils.h"
 #include "checksum.h"
-#include "config/errorno.h"
-#include "config/options.h"
+#include "errorno.h"
+#include "options.h"
 #include <string.h>
 
 /*---------- macro ----------*/

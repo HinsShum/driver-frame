@@ -22,8 +22,8 @@
 /*---------- includes ----------*/
 #include "led.h"
 #include "driver.h"
-#include "config/errorno.h"
-#include "config/options.h"
+#include "errorno.h"
+#include "options.h"
 
 /*---------- macro ----------*/
 /*---------- variable prototype ----------*/

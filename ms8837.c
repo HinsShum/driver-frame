@@ -24,8 +24,8 @@
 /*---------- includes ----------*/
 #include "ms8837.h"
 #include "driver.h"
-#include "config/errorno.h"
-#include "config/options.h"
+#include "errorno.h"
+#include "options.h"
 
 /*---------- macro ----------*/
 /*---------- variable prototype ----------*/

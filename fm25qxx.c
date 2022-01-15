@@ -24,8 +24,8 @@
 /*---------- includes ----------*/
 #include "fm25qxx.h"
 #include "driver.h"
-#include "config/options.h"
-#include "config/errorno.h"
+#include "options.h"
+#include "errorno.h"
 
 /*---------- macro ----------*/
 #define FM25QXX_DEVICE_ID_02                    (0x11)

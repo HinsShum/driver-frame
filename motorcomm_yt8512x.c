@@ -24,8 +24,8 @@
 /*---------- includes ----------*/
 #include "motorcomm_yt8512x.h"
 #include "driver.h"
-#include "config/errorno.h"
-#include "config/options.h"
+#include "errorno.h"
+#include "options.h"
 #include <string.h>
 
 /*---------- macro ----------*/

@@ -32,7 +32,7 @@ extern "C"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "config/misc.h"
+#include "misc.h"
 
 /*---------- macro ----------*/
 #undef _DEV_SECTION_PREFIX

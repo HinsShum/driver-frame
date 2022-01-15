@@ -24,8 +24,8 @@
 /*---------- includes ----------*/
 #include "ms523.h"
 #include "driver.h"
-#include "config/errorno.h"
-#include "config/options.h"
+#include "errorno.h"
+#include "options.h"
 #include "checksum.h"
 #include <string.h>
 

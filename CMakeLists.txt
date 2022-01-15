@@ -6,8 +6,6 @@
 #        which is the required name of the file CMake looks for:
 cmake_minimum_required(VERSION 3.1)
 
-include("${PROJECT_SOURCE_DIR}/config/${BOARD_NAME}/driver.cmake")
-
 set(CFILES "${CMAKE_CURRENT_SOURCE_DIR}/device.c" "${CMAKE_CURRENT_SOURCE_DIR}/driver.c")
 
 if(DEFINED AT24CXX)
