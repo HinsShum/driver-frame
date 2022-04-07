@@ -42,6 +42,7 @@ typedef struct {
     void (*deinit)(void);
     void (*write_protect_set)(bool enable);
     bool (*write_protect_get)(void);
+    void (*write_cycle_time)(void);
     void (*cb)(void);
 } at24cxx_ops_t;
 

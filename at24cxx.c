@@ -185,7 +185,9 @@ static int32_t at24cxx_write(driver_t **pdrv, void *buf, uint32_t offset, uint32
             }
             actual_len += msg.len;
             address += msg.len;
-            __delay_ms(10);
+            if(pdesc->ops.write_cycle_time) {
+                pdesc->ops.write_cycle_time();
+            }
         }
     } while(0);
     if(pdesc->ops.write_protect_set) {
@@ -253,7 +255,7 @@ static int32_t _ioctl_erase_block(at24cxx_describe_t *pdesc, void *args)
     int32_t retval = CY_E_WRONG_ARGS;
     uint32_t *poffset = (uint32_t *)args;
     uint32_t addr = 0;
-    uint8_t buf[64] = {0};
+    uint8_t buf[128] = {0};
     i2c_bus_msg_t msg = {0};
     uint8_t memory_addr[2] = {0};
 
@@ -289,6 +291,9 @@ static int32_t _ioctl_erase_block(at24cxx_describe_t *pdesc, void *args)
         }
         retval = (int32_t)pdesc->info.block_size;
         __debug_info("Erase address(%08X) block size: %dbytes\n", addr, pdesc->info.block_size);
+        if(pdesc->ops.write_cycle_time) {
+            pdesc->ops.write_cycle_time();
+        }
     } while(0);
     if(pdesc->ops.write_protect_set) {
         pdesc->ops.write_protect_set(true);
@@ -301,7 +306,7 @@ static int32_t _ioctl_erase_chip(at24cxx_describe_t *pdesc, void *args)
 {
     uint32_t addr = pdesc->info.start;
     int32_t retval = CY_ERROR;
-    uint8_t buf[64] = {0};
+    uint8_t buf[128] = {0};
     i2c_bus_msg_t msg = {0};
     uint8_t memory_addr[2] = {0};
 
@@ -332,6 +337,9 @@ static int32_t _ioctl_erase_chip(at24cxx_describe_t *pdesc, void *args)
         }
         __debug_info("Erase chip, current address: %08X\n", addr);
         addr += msg.len;
+        if(pdesc->ops.write_cycle_time) {
+            pdesc->ops.write_cycle_time();
+        }
     }
     if(pdesc->ops.write_protect_set) {
         pdesc->ops.write_protect_set(true);
