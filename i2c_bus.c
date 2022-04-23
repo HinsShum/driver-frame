@@ -79,18 +79,51 @@ static type_cb_t type_cb_array[] = {
 };
 
 /*---------- function ----------*/
+static inline bool __i2c_bus_recover(i2c_bus_describe_t *pdesc)
+{
+    bool retval = false;
+
+    for(uint8_t i = 0; i < 9; ++i) {
+        pdesc->ops.scl_set(false);
+        pdesc->ops.delay();
+        pdesc->ops.scl_set(true);
+        pdesc->ops.delay();
+        if(pdesc->ops.sda_get() == true) {
+            /* bus recover */
+            retval = true;
+            break;
+        }
+    }
+
+    return retval;
+}
+
+static inline void __i2c_bus_start(i2c_bus_describe_t *pdesc)
+{
+    pdesc->ops.sda_set(false);
+    pdesc->ops.delay();
+    pdesc->ops.scl_set(false);
+}
+
 static bool _i2c_bus_start(i2c_bus_describe_t *pdesc)
 {
     bool retval = false;
 
-    if(pdesc->ops.sda_get()) {
-        pdesc->ops.sda_set(false);
-        pdesc->ops.delay();
-        pdesc->ops.scl_set(false);
-        retval = true;
-    } else {
-        __debug_error("I2C bus detect the SDA signal is not high when i2c bus start\n");
-    }
+    do {
+        if(pdesc->ops.sda_get()) {
+            __i2c_bus_start(pdesc);
+            retval = true;
+            break;
+        }
+        __debug_error("I2C bus detect the SDA signal is not high when i2c bus start, try recover bus now\n");
+        if(__i2c_bus_recover(pdesc)) {
+            __debug_message("I2C bus recovery\n");
+            __i2c_bus_start(pdesc);
+            retval = true;
+            break;
+        }
+        __debug_error("I2C bus recover failure\n");
+    } while(0);
 
     return retval;
 }
