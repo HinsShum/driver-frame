@@ -45,6 +45,8 @@ static int32_t _ioctl_erase_chip(at24cxx_describe_t *pdesc, void *args);
 static int32_t _ioctl_check_addr_is_block_start(at24cxx_describe_t *pdesc, void *args);
 static int32_t _ioctl_get_info(at24cxx_describe_t *pdesc, void *args);
 static int32_t _ioctl_set_callback(at24cxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_power_on(at24cxx_describe_t *pdesc, void *args);
+static int32_t _ioctl_power_off(at24cxx_describe_t *pdesc, void *args);
 
 /*---------- type define ----------*/
 typedef int32_t (*ioctl_cb_func_t)(at24cxx_describe_t *pdesc, void *args);
@@ -57,6 +59,8 @@ typedef struct {
 DRIVER_DEFINED(at24cxx, at24cxx_open, at24cxx_close, at24cxx_write, at24cxx_read, at24cxx_ioctl, NULL);
 
 static ioctl_cb_t ioctl_cb_array[] = {
+    {IOCTL_DEVICE_POWER_ON, _ioctl_power_on},
+    {IOCTL_DEVICE_POWER_OFF, _ioctl_power_off},
     {IOCTL_FLASH_ERASE_BLOCK, _ioctl_erase_block},
     {IOCTL_FLASH_ERASE_CHIP, _ioctl_erase_chip},
     {IOCTL_FLASH_CHECK_ADDR_IS_BLOCK_START, _ioctl_check_addr_is_block_start},
@@ -405,6 +409,24 @@ static int32_t _ioctl_set_callback(at24cxx_describe_t *pdesc, void *args)
     } while(0);
 
     return retval;
+}
+
+static int32_t _ioctl_power_on(at24cxx_describe_t *pdesc, void *args)
+{
+    if(pdesc->ops.power) {
+        pdesc->ops.power(true);
+    }
+
+    return CY_EOK;
+}
+
+static int32_t _ioctl_power_off(at24cxx_describe_t *pdesc, void *args)
+{
+    if(pdesc->ops.power) {
+        pdesc->ops.power(false);
+    }
+
+    return CY_EOK;
 }
 
 static ioctl_cb_func_t _ioctl_cb_func_find(uint32_t ioctl_cmd)

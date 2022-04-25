@@ -40,6 +40,7 @@ extern "C"
 typedef struct {
     bool (*init)(void);
     void (*deinit)(void);
+    bool (*power)(bool on);
     void (*write_protect_set)(bool enable);
     bool (*write_protect_get)(void);
     void (*write_cycle_time)(void);
