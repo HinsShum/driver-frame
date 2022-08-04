@@ -204,7 +204,6 @@ static int32_t at24cxx_write(driver_t **pdrv, void *buf, uint32_t offset, uint32
 static int32_t at24cxx_read(driver_t **pdrv, void *buf, uint32_t offset, uint32_t length)
 {
     at24cxx_describe_t *pdesc = NULL;
-    int32_t result = CY_EOK;
     uint32_t actual_len = 0;
     i2c_bus_msg_t msg = {0};
     uint8_t memory_addr[2] = {0};
