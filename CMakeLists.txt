@@ -21,6 +21,10 @@ if(DEFINED D100)
     list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/d100.c)
 endif()
 
+if(DEFINED DS28EXX)
+    list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ds28exx.c)
+endif()
+
 if(DEFINED FLASH)
     list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/flash.c)
 endif()
@@ -79,6 +83,10 @@ endif()
 
 if(DEFINED TIMER)
     list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/timer.c)
+endif()
+
+if(DEFINED W1_BUS)
+    list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/w1_bus.c)
 endif()
 
 if(DEFINED WDT)
