@@ -77,6 +77,10 @@ if(DEFINED SERIAL)
     list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/serial.c)
 endif()
 
+if(DEFINED SI446X)
+    list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/si446x.c)
+endif()
+
 if(DEFINED SILKID)
     list(APPEND C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/silkid.c)
 endif()
