@@ -94,8 +94,8 @@ extern "C"
 
 /* Write automatically change dir flag 
  */
-#define SERIAL_WIRTE_CHANGE_DIR_AUTOMATICALLY       (0x00)
-#define SERIAL_WIRTE_CHANGE_DIR_MANUAL              (0x01)
+#define SERIAL_WRITE_CHANGE_DIR_AUTOMATICALLY       (0x00)
+#define SERIAL_WRITE_CHANGE_DIR_MANUAL              (0x01)
 
 /*---------- type define ----------*/
 typedef enum {
