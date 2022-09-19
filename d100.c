@@ -31,6 +31,8 @@
 #include <string.h>
 
 /*---------- macro ----------*/
+#define TAG                                         "D100"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t _open(driver_t **pdrv);
@@ -112,7 +114,7 @@ static int32_t _open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("D100 device has not describe field\n");
+            xlog_tag_error(TAG, "device has not describe field\n");
             break;
         }
         retval = CY_EOK;
@@ -182,11 +184,11 @@ static int32_t _write(driver_t **pdrv, void *buf, uint32_t msgid, uint32_t lengt
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("D100 device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(NULL == (cb = __write_cb_func_find(msgid))) {
-            __debug_error("D100 driver not support this msgid(%02X)\n", msgid);
+            xlog_tag_error(TAG, "driver not support this msgid(%02X)\n", msgid);
             break;
         }
         retval = cb(pdesc, (uint8_t *)buf, length);
@@ -203,11 +205,11 @@ static int32_t __write_version(d100_describe_t *pdesc, uint8_t *buf, uint32_t le
 
     do {
         if(buf || length) {
-            __debug_error("Args format error for d100 get version\n");
+            xlog_tag_error(TAG, "Args format error for d100 get version\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -231,7 +233,7 @@ static int32_t __write_reset(d100_describe_t *pdesc, uint8_t *buf, uint32_t leng
 
     do {
         if(buf || length) {
-            __debug_error("Args format error for d100 reset\n");
+            xlog_tag_error(TAG, "Args format error for d100 reset\n");
             break;
         }
         __msg_init(&msg, (uint8_t)D100_MSGID_RESET, length);
@@ -254,11 +256,11 @@ static int32_t __write_del_a_user(d100_describe_t *pdesc, uint8_t *buf, uint32_t
 
     do {
         if(!buf || length != sizeof(d100_user_id_t)) {
-            __debug_error("Args format error for d100 del a user\n");
+            xlog_tag_error(TAG, "Args format error for d100 del a user\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -285,11 +287,11 @@ static int32_t __write_del_all_users(d100_describe_t *pdesc, uint8_t *buf, uint3
 
     do {
         if(buf || length) {
-            __debug_error("Args format error for d100 del all users\n");
+            xlog_tag_error(TAG, "Args format error for d100 del all users\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -313,11 +315,11 @@ static int32_t __write_get_a_user_info(d100_describe_t *pdesc, uint8_t *buf, uin
 
     do {
         if(!buf || length != sizeof(d100_user_id_t)) {
-            __debug_error("Args format error for d100 get user information\n");
+            xlog_tag_error(TAG, "Args format error for d100 get user information\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -344,11 +346,11 @@ static int32_t __write_get_all_users_id(d100_describe_t *pdesc, uint8_t *buf, ui
 
     do {
         if(buf || length) {
-            __debug_error("Args format error for d100 get all users id\n");
+            xlog_tag_error(TAG, "Args format error for d100 get all users id\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -372,11 +374,11 @@ static int32_t __write_verify(d100_describe_t *pdesc, uint8_t *buf, uint32_t len
 
     do {
         if(!buf || length != sizeof(d100_verify_t)) {
-            __debug_error("Args format error for d100 verify\n");
+            xlog_tag_error(TAG, "Args format error for d100 verify\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -403,11 +405,11 @@ static int32_t __write_enroll_single(d100_describe_t *pdesc, uint8_t *buf, uint3
 
     do {
         if(!buf || length != sizeof(d100_enroll_t)) {
-            __debug_error("Args format error for d100 enroll single face\n");
+            xlog_tag_error(TAG, "Args format error for d100 enroll single face\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -434,11 +436,11 @@ static int32_t __write_power_down(d100_describe_t *pdesc, uint8_t *buf, uint32_t
 
     do {
         if(buf || length) {
-            __debug_error("Args format error for d100 power down\n");
+            xlog_tag_error(TAG, "Args format error for d100 power down\n");
             break;
         }
         if(pdesc->status.state != STATE_IDLE) {
-            __debug_warn("D100 is busy\n");
+            xlog_tag_warn(TAG, "D100 is busy\n");
             retval = CY_E_BUSY;
             break;
         }
@@ -466,11 +468,11 @@ static int32_t _read(driver_t **pdrv, void *buf, uint32_t addition, uint32_t len
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("D100 device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(!buf) {
-            __debug_error("No buffer to store the d100 resp context\n");
+            xlog_tag_error(TAG, "No buffer to store the d100 resp context\n");
             break;
         }
         if(!pingpong_buffer_get_read_buf(&pdesc->pingpong, (void **)&buffer)) {
@@ -667,11 +669,11 @@ static int32_t _ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("D100 device has no descirbe field\n");
+            xlog_tag_error(TAG, "device has no descirbe field\n");
             break;
         }
         if(NULL == (cb = __ioctl_cb_func_find(cmd))) {
-            __debug_error("D100 driver not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);
@@ -687,7 +689,7 @@ static int32_t __ioctl_get_comport(d100_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("No buffer to store the comport of the D100\n");
+            xlog_tag_error(TAG, "No buffer to store the comport of the D100\n");
             break;
         }
         *comport = pdesc->serial.comport;
@@ -713,7 +715,7 @@ static int32_t __ioctl_get_baudrate(d100_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("No buffer to store the baudrate\n");
+            xlog_tag_error(TAG, "No buffer to store the baudrate\n");
             break;
         }
         *baud = pdesc->serial.baudrate;
@@ -730,7 +732,7 @@ static int32_t __ioctl_set_baudrate(d100_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("No baud specified to change the d100 baud\n");
+            xlog_tag_error(TAG, "No baud specified to change the d100 baud\n");
             break;
         }
         retval = CY_EOK;

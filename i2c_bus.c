@@ -28,6 +28,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "I2CBus"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t i2c_bus_open(driver_t **pdrv);
@@ -115,14 +117,14 @@ static bool _i2c_bus_start(i2c_bus_describe_t *pdesc)
             retval = true;
             break;
         }
-        __debug_error("I2C bus detect the SDA signal is not high when i2c bus start, try recover bus now\n");
+        xlog_tag_error(TAG, "bus detect the SDA signal is not high when i2c bus start, try recover bus now\n");
         if(__i2c_bus_recover(pdesc)) {
-            __debug_message("I2C bus recovery\n");
+            xlog_tag_message(TAG, "bus recovery\n");
             __i2c_bus_start(pdesc);
             retval = true;
             break;
         }
-        __debug_error("I2C bus recover failure\n");
+        xlog_tag_error(TAG, "bus recover failure\n");
     } while(0);
 
     return retval;
@@ -214,7 +216,7 @@ static int32_t _i2c_bus_ops_check(i2c_bus_describe_t *pdesc)
 
     if(!pdesc->ops.scl_set || !pdesc->ops.scl_get || !pdesc->ops.sda_set || !pdesc->ops.sda_set || !pdesc->ops.delay) {
         retval = CY_E_POINT_NONE;
-        __debug_error("I2C bus ops not complete\n");
+        xlog_tag_error(TAG, "ops not complete\n");
     }
 
     return retval;
@@ -229,7 +231,7 @@ static int32_t i2c_bus_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("I2C bus has no describe field\n");
+            xlog_tag_error(TAG, "bus has no describe field\n");
             break;
         }
         if(CY_EOK != (retval = _i2c_bus_ops_check(pdesc))) {
@@ -266,7 +268,7 @@ static int32_t __i2c_bus_write_memory_address(i2c_bus_describe_t *pdesc, i2c_bus
 
     do {
         if(true != _i2c_bus_send_address(pdesc, pmsg->dev_addr & 0xFE)) {
-            __debug_error("Send i2c bus address(%02X) failed\n", pmsg->dev_addr);
+            xlog_tag_error(TAG, "Send i2c bus address(%02X) failed\n", pmsg->dev_addr);
             break;
         }
         retval = CY_EOK;
@@ -276,7 +278,7 @@ static int32_t __i2c_bus_write_memory_address(i2c_bus_describe_t *pdesc, i2c_bus
         /* send memory address */
         for(uint32_t i = 0; i < pmsg->mem_addr_counts; ++i) {
             if(true != _i2c_bus_write_byte(pdesc, pmsg->mem_addr[i])) {
-                __debug_error("I2C bus write memory address failed\n");
+                xlog_tag_error(TAG, "bus write memory address failed\n");
                 retval = CY_ERROR;
                 break;
             }
@@ -294,13 +296,13 @@ static int32_t _i2c_bus_random_read_bytes(i2c_bus_describe_t *pdesc, i2c_bus_msg
 
     do {
         if(CY_EOK != (retval = __i2c_bus_write_memory_address(pdesc, pmsg))) {
-            __debug_error("I2C bus random read bytes failed\n");
+            xlog_tag_error(TAG, "bus random read bytes failed\n");
             break;
         }
         pdesc->ops.scl_set(true);
         pdesc->ops.delay();
         if(true != _i2c_bus_send_address(pdesc, pmsg->dev_addr | 0x01)) {
-            __debug_error("Send i2c bus address(%02X) failed\n", pmsg->dev_addr);
+            xlog_tag_error(TAG, "Send i2c bus address(%02X) failed\n", pmsg->dev_addr);
             retval = CY_ERROR;
             break;
         }
@@ -323,7 +325,7 @@ static int32_t _i2c_bus_sequential_read_bytes(i2c_bus_describe_t *pdesc, i2c_bus
 
     do {
         if(true != _i2c_bus_send_address(pdesc, pmsg->dev_addr | 0x01)) {
-            __debug_error("Send i2c bus address(%02X) failed\n", pmsg->dev_addr);
+            xlog_tag_error(TAG, "Send i2c bus address(%02X) failed\n", pmsg->dev_addr);
             break;
         }
         retval = CY_EOK;
@@ -346,13 +348,13 @@ static int32_t _i2c_bus_write_bytes(i2c_bus_describe_t *pdesc, i2c_bus_msg_t *pm
 
     do {
         if(CY_EOK != (retval = __i2c_bus_write_memory_address(pdesc, pmsg))) {
-            __debug_error("I2C bus write bytes failed\n");
+            xlog_tag_error(TAG, "I2C bus write bytes failed\n");
             break;
         }
         retval = CY_ERROR;
         while(length > 0) {
             if(true != _i2c_bus_write_byte(pdesc, *pbuf++)) {
-                __debug_error("I2C bus write data failed, not get the right ack\n");
+                xlog_tag_error(TAG, "I2C bus write data failed, not get the right ack\n");
                 break;
             }
             --length;
@@ -391,15 +393,15 @@ static int32_t i2c_bus_read_bytes(driver_t **pdrv, void *pbuf, uint32_t addition
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("I2C bus has no describe field\n");
+            xlog_tag_error(TAG, "bus has no describe field\n");
             break;
         }
         if(len != sizeof(i2c_bus_msg_t) || !pmsg || !pmsg->buf) {
-            __debug_error("I2C bus read bytes parameters error\n");
+            xlog_tag_error(TAG, "bus read bytes parameters error\n");
             break;
         }
         if(NULL == (cb = _type_cb_func_find(pmsg->type))) {
-            __debug_error("I2C bus not support this type(%08X)\n", pmsg->type);
+            xlog_tag_error(TAG, "bus not support this type(%08X)\n", pmsg->type);
             break;
         }
         retval = cb(pdesc, pmsg);
@@ -419,15 +421,15 @@ static int32_t i2c_bus_write_bytes(driver_t **pdrv, void *pbuf, uint32_t additio
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("I2C bus has no describe field\n");
+            xlog_tag_error(TAG, "bus has no describe field\n");
             break;
         }
         if(len != sizeof(i2c_bus_msg_t) || !pmsg || !pmsg->buf) {
-            __debug_error("I2C bus write bytes parameters error\n");
+            xlog_tag_error(TAG, "bus write bytes parameters error\n");
             break;
         }
         if(NULL == (cb = _type_cb_func_find(pmsg->type))) {
-            __debug_error("I2C bus not support this type(%08X)\n", pmsg->type);
+            xlog_tag_error(TAG, "bus not support this type(%08X)\n", pmsg->type);
             break;
         }
         retval = cb(pdesc, pmsg);
@@ -499,11 +501,11 @@ static int32_t i2c_bus_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("I2C bus has no describe field\n");
+            xlog_tag_error(TAG, "bus has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("I2C bus not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "bus not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

@@ -28,6 +28,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "Buzzer"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t buzzer_open(driver_t **pdrv);
@@ -68,14 +70,14 @@ static int32_t buzzer_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Buzzer device has not bind describe field\n");
+            xlog_tag_error(TAG, "device has not bind describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
                 retval = CY_ERROR;
-                __debug_warn("Buzzer initialize failed\n");
+                xlog_tag_warn(TAG, "initialize failed\n");
             }
         }
     } while(0);
@@ -132,7 +134,7 @@ static int32_t __ioctl_set_cycle(buzzer_describe_t *pdesc, void *args)
     buzzer_cycle_t *cycle = (buzzer_cycle_t *)args;
 
     if(!args) {
-        __debug_error("Args format error, can not set buzzer cycle\n");
+        xlog_tag_error(TAG, "Args format error, can not set buzzer cycle\n");
     } else {
         pdesc->cycle.cycle_count = cycle->cycle_count;
         pdesc->cycle.cycle_time = cycle->cycle_time;
@@ -148,7 +150,7 @@ static int32_t __ioctl_get_cycle(buzzer_describe_t *pdesc, void *args)
     buzzer_cycle_t *cycle = (buzzer_cycle_t *)args;
 
     if(!args) {
-        __debug_error("Args format error, can not get buzzer cycle\n");
+        xlog_tag_error(TAG, "Args format error, can not get buzzer cycle\n");
     } else {
         cycle->cycle_count = pdesc->cycle.cycle_count;
         cycle->cycle_time = pdesc->cycle.cycle_time;
@@ -182,11 +184,11 @@ static int32_t buzzer_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Buzzer driver has not bind describe field\n");
+            xlog_tag_error(TAG, "driver has not bind describe field\n");
             break;
         }
         if(NULL == (cb = __ioctl_cb_func_find(cmd))) {
-            __debug_error("Buzzer driver not support command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

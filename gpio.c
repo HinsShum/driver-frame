@@ -28,6 +28,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "GPIO"
+
 /*---------- variable prototype ----------*/
 static int32_t gpio_open(driver_t **pdrv);
 static void gpio_close(driver_t **pdrv);
@@ -67,14 +69,14 @@ static int32_t gpio_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("GPIO device has not bind describe field\n");
+            xlog_tag_error(TAG, "device has not bind describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
                 retval = CY_ERROR;
-                __debug_warn("GPIO initialize failed\n");
+                xlog_tag_warn(TAG, "initialize failed\n");
             }
         }
     } while(0);
@@ -99,7 +101,7 @@ static int32_t __ioctl_get(gpio_describe_t *pdesc, void *args)
     bool *val = (bool *)args;
 
     if(!args) {
-        __debug_error("Args format error, can not get gpio value\n");
+        xlog_tag_error(TAG, "Args format error, can not get gpio value\n");
     } else {
         if(pdesc->ops.get) {
             *val = pdesc->ops.get();
@@ -118,7 +120,7 @@ static int32_t __ioctl_set(gpio_describe_t *pdesc, void *args)
     bool *val = (bool *)args;
 
     if(!args) {
-        __debug_error("Args format error, can not set gpio value\n");
+        xlog_tag_error(TAG, "Args format error, can not set gpio value\n");
     } else {
         if(pdesc->ops.set) {
             pdesc->ops.set(*val);
@@ -174,11 +176,11 @@ static int32_t gpio_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("GPIO driver has not bind describe field\n");
+            xlog_tag_error(TAG, "driver has not bind describe field\n");
             break;
         }
         if(NULL == (cb = (__ioctl_cb_func_find(cmd)))) {
-            __debug_error("GPIO driver not support cmd(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support cmd(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

@@ -31,6 +31,7 @@
 #include <string.h>
 
 /*---------- macro ----------*/
+#define TAG                                 "W1Bus"
 /*---------- type define ----------*/
 enum {
     LOW = 0,
@@ -183,7 +184,7 @@ static int32_t _ops_check(w1_bus_describe_t *pdesc)
 
     if(pdesc->ops.write_bit == NULL || pdesc->ops.read_bit == NULL) {
         retval = CY_E_POINT_NONE;
-        __debug_error("W1 bus ops not bind\n");
+        xlog_tag_error(TAG, "W1 bus ops not bind\n");
     }
 
     return retval;
@@ -198,7 +199,7 @@ static int32_t w1_bus_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("W1 bus has no describe field\n");
+            xlog_tag_error(TAG, "W1 bus has no describe field\n");
             break;
         }
         if(CY_EOK != (retval = _ops_check(pdesc))) {
@@ -244,7 +245,7 @@ static int32_t w1_bus_write(driver_t **pdrv, void *buf, uint32_t nouse, uint32_t
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("W1 bus not found any device\n");
+            xlog_tag_error(TAG, "W1 bus not found any device\n");
             break;
         }
         if(!buf) {
@@ -266,7 +267,7 @@ static int32_t w1_bus_read(driver_t **pdrv, void *buf, uint32_t nouse, uint32_t 
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("W1 bus not found any device\n");
+            xlog_tag_error(TAG, "W1 bus not found any device\n");
             break;
         }
         if(!buf) {
@@ -303,11 +304,11 @@ static int32_t w1_bus_ioctl(driver_t **pdrv, uint32_t ioctl, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("W1 bus not found any device\n");
+            xlog_tag_error(TAG, "W1 bus not found any device\n");
             break;
         }
         if(NULL == (cb = (ioctl_cb_func_t)_ioctl_cb_find(ioctl))) {
-            __debug_warn("W1 bus not support this ioctl(%08X)\n", ioctl);
+            xlog_tag_warn(TAG, "W1 bus not support this ioctl(%08X)\n", ioctl);
             break;
         }
         retval = cb(pdesc, args);
@@ -343,7 +344,7 @@ static int32_t _ioctl_slot_config(w1_bus_describe_t *pdesc, void *args)
             retval = CY_EOK;
             break;
         }
-        __debug_warn("W1 bus not support this speed mode: %d\n", para->slot.speed);
+        xlog_tag_warn(TAG, "W1 bus not support this speed mode: %d\n", para->slot.speed);
     } while(0);
 
     return retval;
@@ -365,7 +366,7 @@ static int32_t _ioctl_get_romid(w1_bus_describe_t *pdesc, void *args)
         }
         /* get romid */
         if(_w1_bus_reset(pdesc) != true) {
-            __debug_warn("W1 bus reset failure\n");
+            xlog_tag_warn(TAG, "W1 bus reset failure\n");
             retval = CY_ERROR;
             break;
         }
@@ -374,7 +375,7 @@ static int32_t _ioctl_get_romid(w1_bus_describe_t *pdesc, void *args)
         _w1_bus_read(pdesc, romid, ARRAY_SIZE(romid));
         /* check crc */
         if(checksum_crc8_maxim(romid, ARRAY_SIZE(romid)) != 0) {
-            __debug_warn("W1 bus get rom id, but crc error\n");
+            xlog_tag_warn(TAG, "W1 bus get rom id, but crc error\n");
             retval = CY_E_WRONG_CRC;
             break;
         }
@@ -393,7 +394,7 @@ static int32_t _ioctl_bus_reset(w1_bus_describe_t *pdesc, void *args)
     int32_t retval = CY_EOK;
 
     if(_w1_bus_reset(pdesc) != true) {
-        __debug_warn("W1 bus reset failure\n");
+        xlog_tag_warn(TAG, "W1 bus reset failure\n");
         retval = CY_ERROR;
     }
 

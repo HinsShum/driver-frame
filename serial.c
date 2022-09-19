@@ -28,6 +28,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "Serial"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t serial_open(driver_t **pdrv);
@@ -74,7 +76,7 @@ static int32_t serial_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Serial device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         retval = CY_EOK;
@@ -126,7 +128,7 @@ static int32_t _ioctl_serial_get_comport(serial_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no memory to store the comport\n");
+            xlog_tag_error(TAG, "Args is NULL, no memory to store the comport\n");
             break;
         }
         *comport = pdesc->comport;
@@ -152,15 +154,15 @@ static int32_t _ioctl_serial_set_direction(serial_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, can not set direction\n");
+            xlog_tag_error(TAG, "Args is NULL, can not set direction\n");
             break;
         }
         if(!pdesc->ops.dir_change) {
-            __debug_error("Serial device has no set direction ops\n");
+            xlog_tag_error(TAG, "device has no set direction ops\n");
             break;
         }
         if(*pdir > SERIAL_DIRECTION_NRX_NTX) {
-            __debug_error("Serial direction set command(%08X) not support\n", *pdir);
+            xlog_tag_error(TAG, "direction set command(%08X) not support\n", *pdir);
             break;
         }
         pdesc->ops.dir_change(*pdir);
@@ -177,7 +179,7 @@ static int32_t _ioctl_serial_get_baudrate(serial_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no memory to store the baudrate\n");
+            xlog_tag_error(TAG, "Args is NULL, no memory to store the baudrate\n");
             break;
         }
         *pbaudrate = pdesc->baudrate;
@@ -194,12 +196,12 @@ static int32_t _ioctl_serial_set_baudrate(serial_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, can not set the baudrate\n");
+            xlog_tag_error(TAG, "Args is NULL, can not set the baudrate\n");
             break;
         }
         retval = CY_EOK;
         if(*pbaudrate == pdesc->baudrate) {
-            __debug_message("Baudrate no need to change\n");
+            xlog_tag_message(TAG, "Baudrate no need to change\n");
             break;
         }
         pdesc->baudrate = *pbaudrate;
@@ -240,11 +242,11 @@ static int32_t serial_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Serial device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("Serial driver not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

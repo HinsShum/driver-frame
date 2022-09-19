@@ -33,6 +33,8 @@
 #undef BIT
 #define BIT(n)                          (1UL << n)
 
+#define TAG                             "SI446X"
+
 /*---------- type define ----------*/
 typedef enum {
     CMD_NOP = 0x00,
@@ -764,22 +766,22 @@ static bool _reinitialize(si446x_describe_t *pdesc)
 
     do {
         if(pdesc->configure.data == NULL) {
-            __debug_error("No configure data exit, initialize si446x failure\n");
+            xlog_tag_error(TAG, "No configure data exit, initialize si446x failure\n");
             break;
         }
         if(_hw_reset(pdesc) != true) {
-            __debug_error("Reset SI446x failure\n");
+            xlog_tag_error(TAG, "Reset SI446x failure\n");
             break;
         }
         if(_get_part_info(pdesc) != true) {
-            __debug_error("Get SI446x part info failure during initialize sequence\n");
+            xlog_tag_error(TAG, "Get SI446x part info failure during initialize sequence\n");
             break;
         }
         while(configure_data[0] != 0x00) {
             _write_command(pdesc, &configure_data[1], configure_data[0]);
             retval = _wait_cts(pdesc);
             if(retval == false) {
-                __debug_error("Configure SI446x failure\n");
+                xlog_tag_error(TAG, "Configure SI446x failure\n");
                 break;
             }
             configure_data += configure_data[0] + 1;
@@ -789,11 +791,11 @@ static bool _reinitialize(si446x_describe_t *pdesc)
         }
         /* clear all int pend */
         if(_get_int_status(pdesc, 0, 0, 0) != true) {
-            __debug_error("Clear SI446x int pend failure during initialize sequence\n");
+            xlog_tag_error(TAG, "Clear SI446x int pend failure during initialize sequence\n");
             break;
         }
         if(_receiver_configure(pdesc) != true) {
-            __debug_error("Configure receiver failure during initialize sequence\n");
+            xlog_tag_error(TAG, "Configure receiver failure during initialize sequence\n");
             break;
         }
         retval = true;
@@ -811,12 +813,12 @@ static int32_t si446x_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("SI446x driver not found any device\n");
+            xlog_tag_error(TAG, "driver not found any device\n");
             break;
         }
         if(pdesc->ops.init) {
             if(pdesc->ops.init() != true) {
-                __debug_error("SI446x board support package code initialize failure\n");
+                xlog_tag_error(TAG, "board support package code initialize failure\n");
                 retval = CY_ERROR;
                 break;
             }
@@ -835,13 +837,13 @@ static int32_t si446x_open(driver_t **pdrv)
         }
         pdesc->ops.evt_cb = _evt_cb_default;
         /* echo si446x part info */
-        __debug_info("SI446x part info:\n");
-        __debug_info("\tchip revision: %02X\n", pdesc->part_info.chip_revision);
-        __debug_info("\tpart number: %04X\n", pdesc->part_info.part_number);
-        __debug_info("\tpart build: %02X\n", pdesc->part_info.part_build);
-        __debug_info("\tchip id: %04X\n", pdesc->part_info.chip_id);
-        __debug_info("\tcustomer id: %02X\n", pdesc->part_info.customer_id);
-        __debug_info("\trom id: %02X\n", pdesc->part_info.rom_id);
+        xlog_tag_info(TAG, "SI446x part info:\n");
+        xlog_tag_info(TAG, "\tchip revision: %02X\n", pdesc->part_info.chip_revision);
+        xlog_tag_info(TAG, "\tpart number: %04X\n", pdesc->part_info.part_number);
+        xlog_tag_info(TAG, "\tpart build: %02X\n", pdesc->part_info.part_build);
+        xlog_tag_info(TAG, "\tchip id: %04X\n", pdesc->part_info.chip_id);
+        xlog_tag_info(TAG, "\tcustomer id: %02X\n", pdesc->part_info.customer_id);
+        xlog_tag_info(TAG, "\trom id: %02X\n", pdesc->part_info.rom_id);
         retval = CY_EOK;
     } while(0);
 
@@ -936,11 +938,11 @@ static int32_t si446x_write(driver_t **pdrv, void *pbuf, uint32_t type, uint32_t
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(pdesc == NULL) {
-            __debug_error("SI446x driver not found any describe field\n");
+            xlog_tag_error(TAG, "driver not found any describe field\n");
             break;
         }
         if(pbuf == NULL || length == 0) {
-            __debug_error("Buf can not be NULL or length can not be zero when try to write data to SI446x\n");
+            xlog_tag_error(TAG, "Buf can not be NULL or length can not be zero when try to write data to SI446x\n");
             break;
         }
         retval = CY_ERROR;
@@ -967,11 +969,11 @@ static int32_t si446x_read(driver_t **pdrv, void *buf, uint32_t nouse, uint32_t 
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(pdesc == NULL) {
-            __debug_error("SI446x driver not found any describe field\n");
+            xlog_tag_error(TAG, "driver not found any describe field\n");
             break;
         }
         if(buf == NULL || length == 0) {
-            __debug_error("Buf can not be NULL or length can not be zero when try to read data from SI446x\n");
+            xlog_tag_error(TAG, "Buf can not be NULL or length can not be zero when try to read data from SI446x\n");
             break;
         }
         _get_received_data(pdesc, buf, (uint16_t)length);
@@ -1048,16 +1050,16 @@ static int32_t _ioctl_start_receiving(si446x_describe_t *pdesc, void *args)
 
     do {
         if(_get_int_status(pdesc, 0, 0, 0) != true) {
-            __debug_error("Clear int pend failure before start receive\n");
+            xlog_tag_error(TAG, "Clear int pend failure before start receive\n");
             break;
         }
         if(_clear_receiver_fifo(pdesc) != true) {
-            __debug_error("Reset receiver fifo failure before start receive\n");
+            xlog_tag_error(TAG, "Reset receiver fifo failure before start receive\n");
             break;
         }
         /* start rx immediately(condition is 0x00) */
         if(_start_rx(pdesc, 0, UPDATE_RX_PARA_ENTER_RX_MODE | RX_START_IMMEDIATELY, 0) != true) {
-            __debug_error("Start SI446x to receive failure\n");
+            xlog_tag_error(TAG, "Start SI446x to receive failure\n");
             break;
         }
         retval = CY_EOK;
@@ -1076,7 +1078,7 @@ static int32_t _ioctl_get_received_bytes(si446x_describe_t *pdesc, void *args)
             break;
         }
         if(_get_fifo_info(pdesc) != true) {
-            __debug_error("Get received bytes failure\n");
+            xlog_tag_error(TAG, "Get received bytes failure\n");
             break;
         }
         *plength = pdesc->resp.fifo_info.rx_fifo_count;
@@ -1091,7 +1093,7 @@ static int32_t _ioctl_clear_receiver_fifo(si446x_describe_t *pdesc, void *args)
     int32_t retval = CY_EOK;
 
     if(_clear_receiver_fifo(pdesc) != true) {
-        __debug_error("Clear SI446x receiver fifo failure\n");
+        xlog_tag_error(TAG, "Clear SI446x receiver fifo failure\n");
         retval = CY_ERROR;
     }
 
@@ -1103,7 +1105,7 @@ static int32_t _ioctl_clear_transmiter_fifo(si446x_describe_t *pdesc, void *args
     int32_t retval = CY_EOK;
 
     if(_clear_transmiter_fifo(pdesc) != true) {
-        __debug_error("Clear SI446x transmiter fifo failure\n");
+        xlog_tag_error(TAG, "Clear SI446x transmiter fifo failure\n");
         retval = CY_ERROR;
     }
 
@@ -1198,7 +1200,7 @@ static int32_t _ioctl_interrupt_handling(si446x_describe_t *pdesc, void *args)
 
     do {
         if(_get_int_status(pdesc, 0, 0, 0) != true) {
-            __debug_error("Get interrupt pend bits failure during interrupt handling\n");
+            xlog_tag_error(TAG, "Get interrupt pend bits failure during interrupt handling\n");
             break;
         }
         retval = CY_EOK;
@@ -1279,12 +1281,12 @@ static int32_t si446x_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(pdesc == NULL) {
-            __debug_error("SI446x driver not found any describe field\n");
+            xlog_tag_error(TAG, "driver not found any describe field\n");
             break;
         }
         cb = _ioctl_cb_func_find(cmd);
         if(cb == NULL) {
-            __debug_warn("SI446x driver not support this ioctl cmd(%08X)\n", cmd);
+            xlog_tag_warn(TAG, "driver not support this ioctl cmd(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

@@ -57,6 +57,8 @@
                                                     }                               \
                                                 } while(0);
 
+#define TAG                                     "FM25QXX"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t fm25qxx_open(driver_t **pdrv);
@@ -316,14 +318,14 @@ static int32_t fm25qxx_open(driver_t **pdrv)
             do {
                 uint8_t device_id = (pdesc->idcode & 0xFF);
                 uint8_t manufacture_id = (pdesc->idcode >> 8) & 0xFF;
-                __debug_message("FM25QXX idcode: %04X\n", pdesc->idcode);
+                xlog_tag_message(TAG, "idcode: %04X\n", pdesc->idcode);
                 if(_manufacture_support_check(manufacture_id) != true) {
-                    __debug_error("FM25QXX driver not support this manufacture id(%02X)\n", manufacture_id);
+                    xlog_tag_error(TAG, "driver not support this manufacture id(%02X)\n", manufacture_id);
                     retval = CY_ERROR;
                     break;
                 }
                 if(device_id < FM25QXX_DEVICE_ID_02 || device_id > FM25QXX_DEVICE_ID_128) {
-                    __debug_error("FM25QXX driver not support this device id(%02X)\n", device_id);
+                    xlog_tag_error(TAG, "driver not support this device id(%02X)\n", device_id);
                     retval = CY_ERROR;
                     break;
                 }
@@ -553,11 +555,11 @@ static int32_t fm25qxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("FM25QXX device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("FM25QXX driver not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

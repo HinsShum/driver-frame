@@ -287,6 +287,8 @@
 #define PICC_COMMAND_ANTICOLL1                  (0X93)
 #define PICC_COMMAND_ANTICOLL2                  (0x95)
 
+#define TAG                                     "MS523"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t ms523_open(driver_t **pdrv);
@@ -415,18 +417,18 @@ static int32_t ms523_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("MS523 device has not bind describe field\n");
+            xlog_tag_error(TAG, "device has not bind describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
                 retval = CY_ERROR;
-                __debug_error("MS523 initialize failed\n");
+                xlog_tag_error(TAG, "initialize failed\n");
                 break;
             }
             ms523_reset(pdesc);
-            __debug_info("MS523 version: %02X\n", ms523_read_reg(pdesc, REG_VERSION));
+            xlog_tag_info(TAG, "version: %02X\n", ms523_read_reg(pdesc, REG_VERSION));
             ms523_pcd_config_iso_type(pdesc, MS523_CARD_TYPE_ISO14443_A);
             ms523_pcd_antenna_ctrl(pdesc, false);
             __delay_ms(100);
@@ -666,7 +668,7 @@ static int32_t __ioctl_pcd_request_idle(ms523_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args format error, can not request pcd idle\n");
+            xlog_tag_error(TAG, "Args format error, can not request pcd idle\n");
             break;
         }
         retval = ms523_pcd_request(pdesc, MS523_PCD_REQUEST_IDLE, pbuf);
@@ -682,7 +684,7 @@ static int32_t __ioctl_pcd_request_all(ms523_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args format error, can not request pcd all\n");
+            xlog_tag_error(TAG, "Args format error, can not request pcd all\n");
             break;
         }
         retval = ms523_pcd_request(pdesc, MS523_PCD_REQUEST_ALL, pbuf);
@@ -705,7 +707,7 @@ static int32_t __ioctl_pcd_anticoll(ms523_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args format error, can not ioctl pcd anticoll\n");
+            xlog_tag_error(TAG, "Args format error, can not ioctl pcd anticoll\n");
             break;
         }
         retval = ms523_pcd_anticoll(pdesc, pbuf);
@@ -743,11 +745,11 @@ static int32_t ms523_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("MS523 driver has not bind describe field\n");
+            xlog_tag_error(TAG, "driver has not bind describe field\n");
             break;
         }
         if(NULL == (cb = __ioctl_cb_func_find(cmd))) {
-            __debug_error("MS523 driver not support cmd(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support cmd(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

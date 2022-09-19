@@ -68,6 +68,8 @@
 #define _VCC_REG_INTERFACE_CTRL_14443                   (1 << 1)
 #define _VCC_REG_INTERFACE_CTRL_15693                   (1 << 0)
 
+#define TAG                                             "FM13DT160"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t fm13dt160_open(driver_t **pdrv);
@@ -155,20 +157,20 @@ static int32_t fm13dt160_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("FM13DT160 driver has no describe field\n");
+            xlog_tag_error(TAG, "driver has no describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
-                __debug_error("FM13DT160 initialize failed\n");
+                xlog_tag_error(TAG, "initialize failed\n");
                 retval = CY_ERROR;
                 break;
             }
         }
         /* bind to i2c bus */
         if(NULL == (bus = device_open(pdesc->bus_name))) {
-            __debug_error("FM13DT160 bind i2c bus failed\n");
+            xlog_tag_error(TAG, "bind i2c bus failed\n");
             if(pdesc->ops.deinit) {
                 pdesc->ops.deinit();
             }
@@ -225,11 +227,11 @@ static int32_t fm13dt160_write(driver_t **pdrv, void *buf, uint32_t address, uin
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("FM13DT160 driver has no descirbe field\n");
+            xlog_tag_error(TAG, "driver has no descirbe field\n");
             break;
         }
         if(!length) {
-            __debug_error("FM13DT160 write length can not be 0\n");
+            xlog_tag_error(TAG, "write length can not be 0\n");
             break;
         }
         if(pdesc->ops.pwctl) {
@@ -272,17 +274,17 @@ static int32_t fm13dt160_write(driver_t **pdrv, void *buf, uint32_t address, uin
                 msg.len = 5;
                 p = cmd;
                 if(CY_EOK != device_read(pdesc->bus, &msg, 0, sizeof(msg))) {
-                    __debug_error("FM13DT160 write memory failed\n");
+                    xlog_tag_error(TAG, "write memory failed\n");
                     break;
                 } else if(p[0] != 0x00 || p[1] != 0x00 || p[2] != 0x00) {
-                    __debug_error("FM13DT160 write memory flag: %02X, result: %02X%02X\n", p[0], p[1], p[2]);
+                    xlog_tag_error(TAG, "write memory flag: %02X, result: %02X%02X\n", p[0], p[1], p[2]);
                     break;
                 }
                 written_len += write_len;
                 address += write_len;
                 retval = (int32_t)written_len;
             } else {
-                __debug_error("FM13DT160 write memory command failed\n");
+                xlog_tag_error(TAG, "write memory command failed\n");
                 break;
             }
         }
@@ -322,19 +324,19 @@ static int32_t fm13dt160_read(driver_t **pdrv, void *buf, uint32_t address, uint
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("FM13DT160 driver has no describe field\n");
+            xlog_tag_error(TAG, "driver has no describe field\n");
             break;
         }
         if(!!(address & 0x03)) {
-            __debug_error("FM13DT160 read address must be aligned with 4 bytes\n");
+            xlog_tag_error(TAG, "read address must be aligned with 4 bytes\n");
             break;
         }
         if(!!(length & 0x03)) {
-            __debug_error("FM13DT160 read length must be aligned with 4 bytes\n");
+            xlog_tag_error(TAG, "read length must be aligned with 4 bytes\n");
             break;
         }
         if(length < 8) {
-            __debug_error("FM13DT160 read the actual length can not be 0\n");
+            xlog_tag_error(TAG, "read the actual length can not be 0\n");
             break;
         }
         length -= 8;
@@ -370,7 +372,7 @@ static int32_t fm13dt160_read(driver_t **pdrv, void *buf, uint32_t address, uint
             msg.len = length + 3;
             p = (uint8_t *)buf;
             if(CY_EOK != device_read(pdesc->bus, &msg, 0, sizeof(msg))) {
-                __debug_error("FM13DT160 read memory failed\n");
+                xlog_tag_error(TAG, "read memory failed\n");
             } else if(p[0] == 0x00) {
                 retval = (int32_t)length;
                 for(uint32_t i = 0; i < length; ++i) {
@@ -378,10 +380,10 @@ static int32_t fm13dt160_read(driver_t **pdrv, void *buf, uint32_t address, uint
                 }
             } else {
                 retval = CY_ERROR;
-                __debug_error("FM13DT160 read memory flag is error\n");
+                xlog_tag_error(TAG, "read memory flag is error\n");
             }
         } else {
-            __debug_error("FM13DT160 write read command failed\n");
+            xlog_tag_error(TAG, "write read command failed\n");
         }
         device_ioctl(pdesc->bus, IOCTL_I2C_BUS_UNLOCK, NULL);
         __fm13dt160_reg_write(pdesc, _VCC_REG_INTERFACE_CTRL, _VCC_REG_INTERFACE_CTRL_UHF | _VCC_REG_INTERFACE_CTRL_IIC);
@@ -419,7 +421,7 @@ static int32_t __fm13dt160_reg_write(fm13dt160_describe_t *pdesc, uint16_t reg, 
         msg.buf = cmd + 1;
         msg.len = p - cmd - 1;
         if(CY_EOK != device_write(pdesc->bus, &msg, 0, sizeof(msg))) {
-            __debug_error("FM13DT160 write reg command failed\n");
+            xlog_tag_error(TAG, "write reg command failed\n");
             break;
         }
         __delay_us(100);
@@ -427,15 +429,15 @@ static int32_t __fm13dt160_reg_write(fm13dt160_describe_t *pdesc, uint16_t reg, 
         msg.buf = cmd;
         msg.len = 5;
         if(CY_EOK != device_read(pdesc->bus, &msg, 0, sizeof(msg))) {
-            __debug_error("FM13DT160 get write reg command result failed\n");
+            xlog_tag_error(TAG, "get write reg command result failed\n");
             break;
         }
         if(cmd[0] != 0x00 || cmd[1] != 0x00 || cmd[2] != 0x00) {
-            __debug_error("FM13DT160 write reg failed, err:%02X, result:%02X%02X\n", cmd[0], cmd[1], cmd[2]);
+            xlog_tag_error(TAG, "write reg failed, err:%02X, result:%02X%02X\n", cmd[0], cmd[1], cmd[2]);
             break;
         }
         retval = CY_EOK;
-        __debug_message("FM13DT160 write reg(%04X) value(%04X) ok\n", reg, val);
+        xlog_tag_message(TAG, "write reg(%04X) value(%04X) ok\n", reg, val);
     } while(0);
     device_ioctl(pdesc->bus, IOCTL_I2C_BUS_UNLOCK, NULL);
 
@@ -466,7 +468,7 @@ static int32_t __fm13dt160_reg_read(fm13dt160_describe_t *pdesc, uint16_t reg, u
         msg.buf = cmd + 1;
         msg.len = p - cmd - 1;
         if(CY_EOK != device_write(pdesc->bus, &msg, 0, sizeof(msg))) {
-            __debug_error("FM13DT160 write reg read command failed\n");
+            xlog_tag_error(TAG, "write reg read command failed\n");
             break;
         }
         __delay_us(100);
@@ -474,15 +476,15 @@ static int32_t __fm13dt160_reg_read(fm13dt160_describe_t *pdesc, uint16_t reg, u
         msg.buf = cmd;
         msg.len = 5;
         if(CY_EOK != device_read(pdesc->bus, &msg, 0, sizeof(msg))) {
-            __debug_error("FM13DT160 get write reg read command result failed\n");
+            xlog_tag_error(TAG, "get write reg read command result failed\n");
             break;
         }
         if(cmd[0] != 0x00) {
-            __debug_error("FM13DT160 get reg value failed\n");
+            xlog_tag_error(TAG, "get reg value failed\n");
             break;
         }
         *pval = ((uint16_t)cmd[2] << 8) | cmd[1];
-        __debug_message("FM13DT160 reg(%04X) value: %04X\n", reg, *pval);
+        xlog_tag_message(TAG, "reg(%04X) value: %04X\n", reg, *pval);
         retval = CY_EOK;
     } while(0);
     device_ioctl(pdesc->bus, IOCTL_I2C_BUS_UNLOCK, NULL);
@@ -518,7 +520,7 @@ static int32_t _ioctl_initial_regfile(fm13dt160_describe_t *pdesc, void *args)
         msg.buf = cmd + 1;
         msg.len = p - cmd - 1;
         if(CY_EOK != device_write(pdesc->bus, &msg, 0, sizeof(msg))) {
-            __debug_error("FM13DT160 write regfile command failed\n");
+            xlog_tag_error(TAG, "write regfile command failed\n");
             break;
         }
         __delay_us(600);
@@ -526,11 +528,11 @@ static int32_t _ioctl_initial_regfile(fm13dt160_describe_t *pdesc, void *args)
         msg.buf = cmd;
         msg.len = 5;
         if(CY_EOK != device_read(pdesc->bus, &msg, 0, sizeof(msg))) {
-            __debug_error("FM13DT160 get write regfile command result failed\n");
+            xlog_tag_error(TAG, "get write regfile command result failed\n");
             break;
         }
         if(cmd[0] != 0x00 || cmd[1] != 0x00 || cmd[2] != 0x00) {
-            __debug_error("FM13DY160 init regfile failed\n");
+            xlog_tag_error(TAG, "init regfile failed\n");
             break;
         }
         retval = CY_EOK;
@@ -586,11 +588,11 @@ static int32_t fm13dt160_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("FM13DT160 has no describe field\n");
+            xlog_tag_error(TAG, "has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("FM13DT160 not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

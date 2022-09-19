@@ -28,6 +28,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "Flash"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t flash_open(driver_t **pdrv);
@@ -80,7 +82,7 @@ static int32_t flash_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Flash device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         retval = CY_EOK;
@@ -143,21 +145,21 @@ static int32_t _ioctl_flash_erase_block(flash_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, erase block functions must specify the erase address\n");
+            xlog_tag_error(TAG, "Args is NULL, erase block functions must specify the erase address\n");
             break;
         }
         if(!pdesc->ops.erase_block) {
-            __debug_error("Flash device has no erase block ops\n");
+            xlog_tag_error(TAG, "device has no erase block ops\n");
             break;
         }
         erase_length = pdesc->ops.erase_block(*paddr);
         if(!erase_length) {
-            __debug_error("Erase address(%08X) failed\n", *paddr);
+            xlog_tag_error(TAG, "Erase address(%08X) failed\n", *paddr);
             retval = CY_ERROR;
             break;
         }
         retval = (int32_t)erase_length;
-        __debug_message("Erase address(%08X) block size: %dbytes\n", *paddr, erase_length);
+        xlog_tag_message(TAG, "Erase address(%08X) block size: %dbytes\n", *paddr, erase_length);
     } while(0);
 
     return retval;
@@ -169,11 +171,11 @@ static int32_t _ioctl_flash_erase_chip(flash_describe_t *pdesc, void *args)
 
     do {
         if(!pdesc->ops.erase_chip) {
-            __debug_error("Flash device has no erase chip ops\n");
+            xlog_tag_error(TAG, "device has no erase chip ops\n");
             break;
         }
         if(!pdesc->ops.erase_chip()) {
-            __debug_error("Erase chip failed\n");
+            xlog_tag_error(TAG, "Erase chip failed\n");
             retval = CY_ERROR;
         } else {
             retval = CY_EOK;
@@ -190,7 +192,7 @@ static int32_t _ioctl_flash_check_addr_is_block_start(flash_describe_t *pdesc, v
 
     do {
         if(!pdesc->ops.addr_is_block_start) {
-            __debug_error("Flash device has no check ops\n");
+            xlog_tag_error(TAG, "device has no check ops\n");
             break;
         }
         if(!pdesc->ops.addr_is_block_start(*paddr)) {
@@ -210,7 +212,7 @@ static int32_t _ioctl_flash_get_info(flash_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no memory to store flash information\n");
+            xlog_tag_error(TAG, "Args is NULL, no memory to store flash information\n");
             break;
         }
         pinfo->start = pdesc->start;
@@ -274,11 +276,11 @@ static int32_t flash_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Flash device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("Flash driver not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

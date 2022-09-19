@@ -28,6 +28,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "Infrared"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t __open(driver_t **pdrv);
@@ -72,14 +74,14 @@ static int32_t __open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Infrared device has not bind describe field\n");
+            xlog_tag_error(TAG, "device has not bind describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
                 retval = CY_ERROR;
-                __debug_warn("Infrared initialize failed\n");
+                xlog_tag_warn(TAG, "initialize failed\n");
             }
         }
     } while(0);
@@ -103,7 +105,7 @@ static int32_t __ioctl_turn_on(infrared_describe_t *pdesc, void *args)
     int32_t retval = CY_ERROR;
 
     if(!pdesc->ops.ctrl) {
-        __debug_warn("Infrared driver has no ctrl ops\n");
+        xlog_tag_warn(TAG, "driver has no ctrl ops\n");
     } else {
         if(pdesc->ops.ctrl(true)) {
             retval = CY_EOK;
@@ -118,7 +120,7 @@ static int32_t __ioctl_turn_off(infrared_describe_t *pdesc, void *args)
     int32_t retval = CY_ERROR;
 
     if(!pdesc->ops.ctrl) {
-        __debug_warn("Infrared driver has no ctrl ops\n");
+        xlog_tag_warn(TAG, "driver has no ctrl ops\n");
     } else {
         if(pdesc->ops.ctrl(false)) {
             pdesc->cycle.cycle_count = 0;
@@ -135,7 +137,7 @@ static int32_t __ioctl_toggle(infrared_describe_t *pdesc, void *args)
     int32_t retval = CY_ERROR;
 
     if(!pdesc->ops.toggle) {
-        __debug_error("Infrared driver has no toggle ops\n");
+        xlog_tag_error(TAG, "driver has no toggle ops\n");
     } else {
         if(pdesc->ops.toggle()) {
             if(pdesc->cycle.cycle_count != 0 && pdesc->cycle.cycle_count != INFRARED_TOGGLE_REPEAT_MAX_COUNT) {
@@ -154,7 +156,7 @@ static int32_t __ioctl_set_cycle(infrared_describe_t *pdesc, void *args)
     infrared_cycle_t *cycle = NULL;
 
     if(!args) {
-        __debug_error("Args format error, can not update infrared cycle variables\n");
+        xlog_tag_error(TAG, "Args format error, can not update infrared cycle variables\n");
     } else {
         cycle = (infrared_cycle_t *)args;
         pdesc->cycle = *cycle;
@@ -170,7 +172,7 @@ static int32_t __ioctl_get_cycle(infrared_describe_t *pdesc, void *args)
     infrared_cycle_t *cycle = NULL;
     
     if(!args) {
-        __debug_error("Args format error, can not get infrared cycle variables\n");
+        xlog_tag_error(TAG, "Args format error, can not get infrared cycle variables\n");
     } else {
         cycle = (infrared_cycle_t *)args;
         *cycle = pdesc->cycle;
@@ -186,7 +188,7 @@ static int32_t __ioctl_set_freq(infrared_describe_t *pdesc, void *args)
     uint32_t *freq = (uint32_t *)args;
 
     if(!args) {
-        __debug_error("Args format error, can not set freq for infrared\n");
+        xlog_tag_error(TAG, "Args format error, can not set freq for infrared\n");
     } else {
         if(pdesc->freq != *freq) {
             pdesc->freq = *freq;
@@ -209,7 +211,7 @@ static int32_t __ioctl_get_freq(infrared_describe_t *pdesc, void *args)
     uint32_t *freq = (uint32_t *)args;
 
     if(!args) {
-        __debug_error("Args format error, can not get infrared freq\n");
+        xlog_tag_error(TAG, "Args format error, can not get infrared freq\n");
     } else {
         *freq = pdesc->freq;
         retval = CY_EOK;
@@ -242,11 +244,11 @@ static int32_t __ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Infrared driver has not bind describe field\n");
+            xlog_tag_error(TAG, "driver has not bind describe field\n");
             break;
         }
         if(NULL == (cb = __ioctl_cb_func_find(cmd))) {
-            __debug_error("Infrared driver not support cmd(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support cmd(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

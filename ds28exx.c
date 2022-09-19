@@ -30,6 +30,8 @@
 #include "checksum.h"
 
 /*---------- macro ----------*/
+#define TAG                                     "DS28EXX"
+
 /*---------- type define ----------*/
 typedef int32_t (*ioctl_cb_func_t)(ds28exx_describe_t *, void *);
 typedef struct {
@@ -69,19 +71,19 @@ static int32_t ds28exx_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("DS28EXX driver not found any device\n");
+            xlog_tag_error(TAG, "driver not found any device\n");
             break;
         }
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
-                __debug_error("DS28EXX initialize failure\n");
+                xlog_tag_error(TAG, "initialize failure\n");
                 retval = CY_ERROR;
                 break;
             }
         }
         /* bind bus */
         if(NULL == (bus = device_open(pdesc->bus_name))) {
-            __debug_error("DS28EXX not found any w1 bus\n");
+            xlog_tag_error(TAG, "not found any w1 bus\n");
             if(pdesc->ops.deinit) {
                 pdesc->ops.deinit();
             }
@@ -141,11 +143,11 @@ static int32_t ds28exx_ioctl(driver_t **pdrv, uint32_t ioctl, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(pdesc == NULL) {
-            __debug_error("Driver DS28EXX not foung any device\n");
+            xlog_tag_error(TAG, "driver not foung any device\n");
             break;
         }
         if(NULL == (cb = (ioctl_cb_func_t)_ioctl_cb_func_find(ioctl))) {
-            __debug_warn("DS28EXX driver not support this ioctl(%08X)\n", ioctl);
+            xlog_tag_warn(TAG, "driver not support this ioctl(%08X)\n", ioctl);
             break;
         }
         retval = cb(pdesc, args);

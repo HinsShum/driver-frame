@@ -26,6 +26,8 @@
 #include "options.h"
 
 /*---------- macro ----------*/
+#define TAG                                         "LED"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t led_open(driver_t **pdrv);
@@ -72,13 +74,13 @@ static int32_t led_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Led device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
-                __debug_error("Led device initialize failed\n");
+                xlog_tag_error(TAG, "device initialize failed\n");
                 retval = CY_ERROR;
                 break;
             }
@@ -99,7 +101,7 @@ static void led_close(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Led device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(pdesc->ops.ctrl) {
@@ -117,13 +119,13 @@ static int32_t _ioctl_led_turn_on(led_describe_t *pdesc, void *args)
 
     do {
         if(!pdesc->ops.ctrl) {
-            __debug_error("Led driver has no turn on ops\n");
+            xlog_tag_error(TAG, "driver has no turn on ops\n");
             break;
         }
         retval = CY_EOK;
         if(!pdesc->ops.ctrl(true)) {
             retval = CY_ERROR;
-            __debug_error("Led driver try to turn on the led failed\n");
+            xlog_tag_error(TAG, "driver try to turn on the led failed\n");
         }
     } while(0);
 
@@ -136,13 +138,13 @@ static int32_t _ioctl_led_turn_off(led_describe_t *pdesc, void *args)
 
     do {
         if(!pdesc->ops.ctrl) {
-            __debug_error("Led driver has no turn off ops\n");
+            xlog_tag_error(TAG, "driver has no turn off ops\n");
             break;
         }
         retval = CY_EOK;
         if(!pdesc->ops.ctrl(false)) {
             retval = CY_ERROR;
-            __debug_error("Led driver try to turn off the led failed\n");
+            xlog_tag_error(TAG, "driver try to turn off the led failed\n");
             break;
         }
         pdesc->cycle.cycle_count = 0;
@@ -158,13 +160,13 @@ static int32_t _ioctl_led_toggle(led_describe_t *pdesc, void *args)
 
     do {
         if(!pdesc->ops.toggle) {
-            __debug_error("Led driver has no toggle ops\n");
+            xlog_tag_error(TAG, "driver has no toggle ops\n");
             break;
         }
         retval = CY_EOK;
         if(!pdesc->ops.toggle()) {
             retval = CY_ERROR;
-            __debug_error("Led driver try to toggle the led failed\n");
+            xlog_tag_error(TAG, "driver try to toggle the led failed\n");
             break;
         }
         if(pdesc->cycle.cycle_count != 0 && pdesc->cycle.cycle_count != LED_CYCLE_COUNT_MAX) {
@@ -182,7 +184,7 @@ static int32_t _ioctl_led_set_cycle(led_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, can not set the led cycle\n");
+            xlog_tag_error(TAG, "Args is NULL, can not set the led cycle\n");
             break;
         }
         pdesc->cycle.cycle_count = pcycle->cycle_count;
@@ -200,7 +202,7 @@ static int32_t _ioctl_led_get_cycle(led_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no memory to store the cycle information\n");
+            xlog_tag_error(TAG, "Args is NULL, no memory to store the cycle information\n");
             break;
         }
         pcycle->cycle_count = pdesc->cycle.cycle_count;
@@ -218,11 +220,11 @@ static int32_t _ioctl_led_get_status(led_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no memory to store the led status\n");
+            xlog_tag_error(TAG, "Args is NULL, no memory to store the led status\n");
             break;
         }
         if(!pdesc->ops.get) {
-            __debug_error("Led driver has no get ops\n");
+            xlog_tag_error(TAG, "driver has no get ops\n");
             break;
         }
         *pstatus = pdesc->ops.get();
@@ -256,11 +258,11 @@ static int32_t led_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("Led device has no describe field\n");
+            xlog_tag_error(TAG, "device has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("Led driver not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "driver not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);

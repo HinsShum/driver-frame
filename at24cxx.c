@@ -30,6 +30,8 @@
 #include <string.h>
 
 /*---------- macro ----------*/
+#define TAG                                         "AT24Cxx"
+
 /*---------- variable prototype ----------*/
 /*---------- function prototype ----------*/
 static int32_t at24cxx_open(driver_t **pdrv);
@@ -79,20 +81,20 @@ static int32_t at24cxx_open(driver_t **pdrv)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("AT24CXX driver has no describe field\n");
+            xlog_tag_error(TAG, "driver has no describe field\n");
             break;
         }
         retval = CY_EOK;
         if(pdesc->ops.init) {
             if(!pdesc->ops.init()) {
-                __debug_error("AT24CXX initialize failed\n");
+                xlog_tag_error(TAG, "initialize failed\n");
                 retval = CY_ERROR;
                 break;
             }
         }
         /* bind to i2c bus */
         if(NULL == (bus = device_open(pdesc->bus_name))) {
-            __debug_error("AT24CXX bind i2c bus failed\n");
+            xlog_tag_error(TAG, "bind i2c bus failed\n");
             if(pdesc->ops.deinit) {
                 pdesc->ops.deinit();
             }
@@ -143,11 +145,11 @@ static int32_t at24cxx_write(driver_t **pdrv, void *buf, uint32_t offset, uint32
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("AT24CXX driver has no describe field\n");
+            xlog_tag_error(TAG, "driver has no describe field\n");
             break;
         }
         if(!pdesc->bus) {
-            __debug_error("AT24CXX not bind to i2c bus\n");
+            xlog_tag_error(TAG, "not bind to i2c bus\n");
             break;
         }
         msg.type = I2C_BUS_TYPE_WRITE;
@@ -159,11 +161,11 @@ static int32_t at24cxx_write(driver_t **pdrv, void *buf, uint32_t offset, uint32
         }
         address = pdesc->info.start + offset;
         if(address >= pdesc->info.end) {
-            __debug_error("AT24CXX write address is overflow\n");
+            xlog_tag_error(TAG, "write address is overflow\n");
             length = 0;
         } else if((address + length) > pdesc->info.end) {
             length = pdesc->info.end - address;
-            __debug_warn("AT24CXX write address plus length is overflow, it only can write %d bytes\n", length);
+            xlog_tag_warn(TAG, "write address plus length is overflow, it only can write %d bytes\n", length);
         }
         while(actual_len < length) {
             if(pdesc->mem_addr_counts == 1) {
@@ -184,7 +186,7 @@ static int32_t at24cxx_write(driver_t **pdrv, void *buf, uint32_t offset, uint32
             device_ioctl(pdesc->bus, IOCTL_I2C_BUS_UNLOCK, NULL);
             _do_callback(pdesc);
             if(CY_EOK != result) {
-                __debug_error("AT24CXX write failed\n");
+                xlog_tag_error(TAG, "write failed\n");
                 break;
             }
             actual_len += msg.len;
@@ -214,11 +216,11 @@ static int32_t at24cxx_read(driver_t **pdrv, void *buf, uint32_t offset, uint32_
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("AT24CXX driver has no describe field\n");
+            xlog_tag_error(TAG, "driver has no describe field\n");
             break;
         }
         if(!pdesc->bus) {
-            __debug_error("AT24CXX not bind to i2c bus\n");
+            xlog_tag_error(TAG, "not bind to i2c bus\n");
             break;
         }
         msg.type = I2C_BUS_TYPE_RANDOM_READ;
@@ -227,12 +229,12 @@ static int32_t at24cxx_read(driver_t **pdrv, void *buf, uint32_t offset, uint32_
         msg.mem_addr_counts = pdesc->mem_addr_counts;
         address = pdesc->info.start + offset;
         if(address >= pdesc->info.end) {
-            __debug_error("AT24CXX read address is overflow\n");
+            xlog_tag_error(TAG, "read address is overflow\n");
             length = 0;
             break;
         } else if((address + length) > pdesc->info.end) {
             length = pdesc->info.end - address;
-            __debug_warn("AT24CXX read address plus length is overflow, it only can read %d bytes\n", length);
+            xlog_tag_warn(TAG, "read address plus length is overflow, it only can read %d bytes\n", length);
         }
         if(pdesc->mem_addr_counts == 1) {
             memory_addr[0] = address & 0xFF;
@@ -264,7 +266,7 @@ static int32_t _ioctl_erase_block(at24cxx_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, erase block function must specify the erase address\n");
+            xlog_tag_error(TAG, "Args is NULL, erase block function must specify the erase address\n");
             break;
         }
         memset(buf, 0xFF, sizeof(buf));
@@ -289,11 +291,11 @@ static int32_t _ioctl_erase_block(at24cxx_describe_t *pdesc, void *args)
         device_ioctl(pdesc->bus, IOCTL_I2C_BUS_UNLOCK, NULL);
         _do_callback(pdesc);
         if(CY_EOK != retval) {
-            __debug_error("AT24CXX erase block failed\n");
+            xlog_tag_error(TAG, "erase block failed\n");
             break;
         }
         retval = (int32_t)pdesc->info.block_size;
-        __debug_info("Erase address(%08X) block size: %dbytes\n", addr, pdesc->info.block_size);
+        xlog_tag_info(TAG, "Erase address(%08X) block size: %dbytes\n", addr, pdesc->info.block_size);
         if(pdesc->ops.write_cycle_time) {
             pdesc->ops.write_cycle_time();
         }
@@ -335,10 +337,10 @@ static int32_t _ioctl_erase_chip(at24cxx_describe_t *pdesc, void *args)
         device_ioctl(pdesc->bus, IOCTL_I2C_BUS_UNLOCK, NULL);
         _do_callback(pdesc);
         if(CY_EOK != retval) {
-            __debug_error("AT24CXX erase chip failed, %08X address occur error\n", addr);
+            xlog_tag_error(TAG, "erase chip failed, %08X address occur error\n", addr);
             break;
         }
-        __debug_info("Erase chip, current address: %08X\n", addr);
+        xlog_tag_info(TAG, "Erase chip, current address: %08X\n", addr);
         addr += msg.len;
         if(pdesc->ops.write_cycle_time) {
             pdesc->ops.write_cycle_time();
@@ -361,7 +363,7 @@ static int32_t _ioctl_check_addr_is_block_start(at24cxx_describe_t *pdesc, void 
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, can not check the addr\n");
+            xlog_tag_error(TAG, "Args is NULL, can not check the addr\n");
             break;
         }
         if(((*poffset + pdesc->info.start) % pdesc->info.block_size) == 0) {
@@ -381,7 +383,7 @@ static int32_t _ioctl_get_info(at24cxx_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no memory to store at24cxx information\n");
+            xlog_tag_error(TAG, "Args is NULL, no memory to store at24cxx information\n");
             break;
         }
         pinfo->start = pdesc->info.start;
@@ -400,7 +402,7 @@ static int32_t _ioctl_set_callback(at24cxx_describe_t *pdesc, void *args)
 
     do {
         if(!args) {
-            __debug_error("Args is NULL, no callback to bind the at24cxx device\n");
+            xlog_tag_error(TAG, "Args is NULL, no callback to bind the at24cxx device\n");
             break;
         }
         pdesc->ops.cb = cb;
@@ -452,11 +454,11 @@ static int32_t at24cxx_ioctl(driver_t **pdrv, uint32_t cmd, void *args)
     pdesc = container_of(pdrv, device_t, pdrv)->pdesc;
     do {
         if(!pdesc) {
-            __debug_error("AT24CXX has no describe field\n");
+            xlog_tag_error(TAG, "has no describe field\n");
             break;
         }
         if(NULL == (cb = _ioctl_cb_func_find(cmd))) {
-            __debug_error("AT24CXX not support this command(%08X)\n", cmd);
+            xlog_tag_error(TAG, "not support this command(%08X)\n", cmd);
             break;
         }
         retval = cb(pdesc, args);
