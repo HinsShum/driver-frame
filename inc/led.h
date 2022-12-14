@@ -34,7 +34,7 @@ extern "C"
 
 /*---------- macro ----------*/
 /**
- * @brief Turn on the led.
+ * @brief Turn on the led and clear toggle information.
  * @param Args is not useful, it can be NULL.
  * @retval If the led driver has no turn on functions, the interface
  *         will return CY_E_WRONG_ARGS.
@@ -46,7 +46,7 @@ extern "C"
 #define IOCTL_LED_ON                        (IOCTL_USER_START + 0x00)
 
 /**
- * @brief Turn off the led.
+ * @brief Turn off the led and clear toggle information.
  * @param Args is not useful, it can be NULL.
  * @retval If the led driver has no turn off functions, the interface
  *         will return CY_E_WRONG_ARGS.
@@ -58,7 +58,7 @@ extern "C"
 #define IOCTL_LED_OFF                       (IOCTL_USER_START + 0x01)
 
 /**
- * @brief Toggle the led.
+ * @brief Toggle the led once and clear toggle information.
  * @param Args is not useful, it can be NULL.
  * @retval If the led driver has no toggle functions, the interface
  *         will return CY_E_WRONG_ARGS.
@@ -66,15 +66,26 @@ extern "C"
  *         CY_ERROR.
  *         If the led driver toggle ok, the interface will return CY_EOK.
  */
-#define IOCTL_LED_TOGGLE                    (IOCTL_USER_START + 0x02)
+#define IOCTL_LED_TOGGLE_ONCE               (IOCTL_USER_START + 0x02)
 
 /**
- * @brief Set the cycle of the led.
+ * @brief Toggle the led by toggle information.
+ * @param Args is not useful, it can be NULL.
+ * @retval If the led driver has no toggle functions, the interface
+ *         will return CY_E_WRONG_ARGS.
+ *         If the led driver toggle failed, the interface will return
+ *         CY_ERROR.
+ *         If the led driver toggle ok, the interface will return CY_EOK.
+ */
+#define IOCTL_LED_TOGGLE                    (IOCTL_USER_START + 0x03)
+
+/**
+ * @brief Set the toggle information of the led.
  * @param Args is a pointer of the cycle information, the tyoe is `led_cycle_t`.
  * @retval If the args is null, the interface will return CY_E_WRONG_ARGS,
  *         otherwise, return CY_EOK.
  */
-#define IOCTL_LED_SET_CYCLE                 (IOCTL_USER_START + 0x03)
+#define IOCTL_LED_SET_TOGGLE                (IOCTL_USER_START + 0x04)
 
 /**
  * @brief Get the cycle of the led.
@@ -83,7 +94,7 @@ extern "C"
  * @retval If the args is null, the interface will return CY_E_WRONG_ARGS,
  *         otherwise, return CY_EOK.
  */
-#define IOCTL_LED_GET_CYCLE                 (IOCTL_USER_START + 0x04)
+#define IOCTL_LED_GET_TOGGLE                (IOCTL_USER_START + 0x05)
 
 /**
  * @brief Get the led status.
@@ -91,15 +102,15 @@ extern "C"
  * @retval If the args is null, the interface will return CY_E_WRONG_ARGS,
  *         otherwise, return CY_EOK.
  */
-#define IOCTL_LED_GET_STATUS                (IOCTL_USER_START + 0x05)
+#define IOCTL_LED_GET_STATUS                (IOCTL_USER_START + 0x06)
 
-#define LED_CYCLE_COUNT_MAX                 (0xFFFFFFFF)
+#define LED_TOGGLE_COUNT_MAX                (0xFFFFFFFF)
 
 /*---------- type define ----------*/
 typedef struct {
-    uint32_t cycle_time;
-    uint32_t cycle_count;
-} led_cycle_t;
+    uint32_t millisecond;
+    uint32_t count;
+} led_toggle_t;
 
 typedef struct {
     bool (*init)(void);
@@ -110,7 +121,7 @@ typedef struct {
 } led_ops_t;
 
 typedef struct {
-    led_cycle_t cycle;
+    led_toggle_t toggle;
     led_ops_t ops;
 } led_describe_t;
 

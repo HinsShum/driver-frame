@@ -38,9 +38,10 @@ static int32_t led_ioctl(driver_t **pdrv, uint32_t cmd, void *arg);
  */
 static int32_t _ioctl_led_turn_on(led_describe_t *pdesc, void *args);
 static int32_t _ioctl_led_turn_off(led_describe_t *pdesc, void *args);
+static int32_t _ioctl_led_toggle_once(led_describe_t *pdesc, void *args);
 static int32_t _ioctl_led_toggle(led_describe_t *pdesc, void *args);
-static int32_t _ioctl_led_set_cycle(led_describe_t *pdesc, void *args);
-static int32_t _ioctl_led_get_cycle(led_describe_t *pdesc, void *args);
+static int32_t _ioctl_led_set_toggle(led_describe_t *pdesc, void *args);
+static int32_t _ioctl_led_get_toggle(led_describe_t *pdesc, void *args);
 static int32_t _ioctl_led_get_status(led_describe_t *pdesc, void *args);
 
 /*---------- type define ----------*/
@@ -58,9 +59,10 @@ DRIVER_DEFINED(led, led_open, led_close, NULL, NULL, led_ioctl, NULL);
 static ioctl_cb_t ioctl_cb_array[] = {
     {IOCTL_LED_ON, _ioctl_led_turn_on},
     {IOCTL_LED_OFF, _ioctl_led_turn_off},
+    {IOCTL_LED_TOGGLE_ONCE, _ioctl_led_toggle_once},
     {IOCTL_LED_TOGGLE, _ioctl_led_toggle},
-    {IOCTL_LED_SET_CYCLE, _ioctl_led_set_cycle},
-    {IOCTL_LED_GET_CYCLE, _ioctl_led_get_cycle},
+    {IOCTL_LED_SET_TOGGLE, _ioctl_led_set_toggle},
+    {IOCTL_LED_GET_TOGGLE, _ioctl_led_get_toggle},
     {IOCTL_LED_GET_STATUS, _ioctl_led_get_status}
 };
 
@@ -127,6 +129,8 @@ static int32_t _ioctl_led_turn_on(led_describe_t *pdesc, void *args)
             retval = CY_ERROR;
             xlog_tag_error(TAG, "driver try to turn on the led failed\n");
         }
+        pdesc->toggle.millisecond = 0;
+        pdesc->toggle.count = 0;
     } while(0);
 
     return retval;
@@ -147,14 +151,14 @@ static int32_t _ioctl_led_turn_off(led_describe_t *pdesc, void *args)
             xlog_tag_error(TAG, "driver try to turn off the led failed\n");
             break;
         }
-        pdesc->cycle.cycle_count = 0;
-        pdesc->cycle.cycle_time = 0;
+        pdesc->toggle.millisecond = 0;
+        pdesc->toggle.count = 0;
     } while(0);
 
     return retval;
 }
 
-static int32_t _ioctl_led_toggle(led_describe_t *pdesc, void *args)
+static int32_t _ioctl_led_toggle_once(led_describe_t *pdesc, void *args)
 {
     int32_t retval = CY_E_WRONG_ARGS;
 
@@ -169,44 +173,69 @@ static int32_t _ioctl_led_toggle(led_describe_t *pdesc, void *args)
             xlog_tag_error(TAG, "driver try to toggle the led failed\n");
             break;
         }
-        if(pdesc->cycle.cycle_count != 0 && pdesc->cycle.cycle_count != LED_CYCLE_COUNT_MAX) {
-            pdesc->cycle.cycle_count--;
+        pdesc->toggle.millisecond = 0;
+        pdesc->toggle.count = 0;
+    } while(0);
+
+    return retval;
+}
+
+static int32_t _ioctl_led_toggle(led_describe_t *pdesc, void *args)
+{
+    int32_t retval = CY_E_WRONG_ARGS;
+
+    do {
+        if(!pdesc->ops.toggle) {
+            xlog_tag_error(TAG, "driver has no toggle ops\n");
+            break;
+        }
+        if(!pdesc->toggle.millisecond || !pdesc->toggle.count) {
+            break;
+        }
+        retval = CY_EOK;
+        if(!(__get_ticks_from_isr() % pdesc->toggle.millisecond)) {
+            if(!pdesc->ops.toggle()) {
+                retval = CY_ERROR;
+                xlog_tag_error(TAG, "driver try to toggle the led failed\n");
+                break;
+            }
+            if(pdesc->toggle.count && pdesc->toggle.count != LED_TOGGLE_COUNT_MAX) {
+                pdesc->toggle.count--;
+            }
         }
     } while(0);
 
     return retval;
 }
 
-static int32_t _ioctl_led_set_cycle(led_describe_t *pdesc, void *args)
+static int32_t _ioctl_led_set_toggle(led_describe_t *pdesc, void *args)
 {
     int32_t retval = CY_E_WRONG_ARGS;
-    led_cycle_t *pcycle = (led_cycle_t *)args;
+    led_toggle_t *toggle = (led_toggle_t *)args;
 
     do {
         if(!args) {
             xlog_tag_error(TAG, "Args is NULL, can not set the led cycle\n");
             break;
         }
-        pdesc->cycle.cycle_count = pcycle->cycle_count;
-        pdesc->cycle.cycle_time = pcycle->cycle_time;
+        pdesc->toggle = *toggle;
         retval = CY_EOK;
     } while(0);
 
     return retval;
 }
 
-static int32_t _ioctl_led_get_cycle(led_describe_t *pdesc, void *args)
+static int32_t _ioctl_led_get_toggle(led_describe_t *pdesc, void *args)
 {
     int32_t retval = CY_E_WRONG_ARGS;
-    led_cycle_t *pcycle = (led_cycle_t *)args;
+    led_toggle_t *toggle = (led_toggle_t *)args;
 
     do {
         if(!args) {
             xlog_tag_error(TAG, "Args is NULL, no memory to store the cycle information\n");
             break;
         }
-        pcycle->cycle_count = pdesc->cycle.cycle_count;
-        pcycle->cycle_time = pdesc->cycle.cycle_time;
+        *toggle = pdesc->toggle;
         retval = CY_EOK;
     } while(0);
 
