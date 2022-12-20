@@ -35,10 +35,45 @@ extern "C"
 #include "device.h"
 
 /*---------- macro ----------*/
+/**
+ * @brief Get the timer frequency information.
+ * @param Args is a pointer of the buffer to store the frequency information.
+ * @retval If the args is null, the interface will return CY_E_WRONG_ARGS,
+ *         otherwise, return CY_EOK.
+ */
 #define IOCTL_TIMER_GET_FREQ                        (IOCTL_USER_START + 0x00)
+
+/**
+ * @brief Set a new frequency to timer.
+ * @param Args is a pointer of the new frequency
+ * @retval If the args is null, the interface will return CY_E_WRONG_ARGS,
+ *         otherwise, return CY_EOK.
+ */
 #define IOCTL_TIMER_SET_FREQ                        (IOCTL_USER_START + 0x01)
+
+/**
+ * @brief Set the irq server callback function.
+ * @note If enable the timer interrupt function, when occur once interrupt,
+ *       the callback function will be called once.
+ * @param Args is the pointer of the callback function.
+ * @retval The interface always return CY_EOK.
+ */
 #define IOCTL_TIMER_SET_IRQ_HANDLER                 (IOCTL_USER_START + 0x02)
+
+/**
+ * @brief Enable the timer.
+ * @param Args is not useful, it can be NULL.
+ * @retval If enable successfully, the interface will return CY_EOK,
+ *         otherwise, return CY_ERROR.
+ */
 #define IOCTL_TIMER_ENABLE                          (IOCTL_USER_START + 0x03)
+
+/**
+ * @brief Disable the timer.
+ * @param Args is not useful, it can be NULL.
+ * @retval If disable successfully, the interface will return CY_EOK,
+ *         otherwise, return CY_ERROR.
+ */
 #define IOCTL_TIMER_DISABLE                         (IOCTL_USER_START + 0x04)
 
 /*---------- type define ----------*/
