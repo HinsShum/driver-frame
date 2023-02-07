@@ -712,7 +712,7 @@ static bool _receiver_configure(si446x_describe_t *pdesc)
              *  set field2 length to pdesc->configure.receiver.length.variable_max_length
              *  set field3 length to 0x00
              */
-            if(pdesc->configure.receiver.length.variable_max_length > 63) {
+            if(pdesc->configure.receiver.length.variable_max_length > 8191) {
                 break;
             }
             buf[0] = 0x02;
