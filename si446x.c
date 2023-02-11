@@ -871,14 +871,14 @@ static bool _write_variable_length(si446x_describe_t *pdesc, const uint8_t *pbuf
         if(length > 63) {
             break;
         }
+        if(_clear_transmiter_fifo(pdesc) != true) {
+            break;
+        }
         /* exit rx state */
         if(_change_state(pdesc, STATE_READY) != true) {
             break;
         }
         if(_get_int_status(pdesc, 0, 0, 0) != true) {
-            break;
-        }
-        if(_clear_transmiter_fifo(pdesc) != true) {
             break;
         }
         pdesc->ops.select(true);
@@ -905,14 +905,14 @@ static bool _write_fixed_length(si446x_describe_t *pdesc, const uint8_t *pbuf, u
         if(length > 64) {
             break;
         }
+        if(_clear_transmiter_fifo(pdesc) != true) {
+            break;
+        }
         /* exit rx state */
         if(_change_state(pdesc, STATE_READY) != true) {
             break;
         }
         if(_get_int_status(pdesc, 0, 0, 0) != true) {
-            break;
-        }
-        if(_clear_transmiter_fifo(pdesc) != true) {
             break;
         }
         pdesc->ops.select(true);
